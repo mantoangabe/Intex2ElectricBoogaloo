@@ -12,4 +12,3 @@ This folder contains split documentation for the INTEX 2026 Winter capstone proj
 - [Submission, Peer Eval & Presentation](submission-and-logistics.md) — Deliverable submission, peer evaluation, presentation details, and logistics
 - [Data Dictionary](data-dictionary.md) — Complete schema for all 17 tables (Appendix A)
 
-\
