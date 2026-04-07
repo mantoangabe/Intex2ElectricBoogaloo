@@ -3,7 +3,8 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 // Public pages
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
-import ImpactDashboard from './pages/ImpactDashboard';
+import DonorImpact from './pages/donor/DonorImpact';
+import DonorDashboard from './pages/donor/DonorDashboard';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 
 // Admin pages
@@ -19,7 +20,8 @@ function App() {
     <Routes>
       {/* Public pages */}
       <Route path="/" element={<HomePage />} />
-      <Route path="/impact" element={<ImpactDashboard />} />
+      <Route path="/donor" element={<DonorImpact />} />
+      <Route path="/donor/dashboard" element={<DonorDashboard />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/privacy" element={<PrivacyPolicy />} />
 

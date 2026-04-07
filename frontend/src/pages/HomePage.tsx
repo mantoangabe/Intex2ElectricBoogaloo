@@ -20,8 +20,8 @@ export default function HomePage() {
           for survivors of trafficking and abuse across the Philippines.
         </p>
         <div className="hero-buttons">
-          <button className="btn btn-primary">Support Our Mission</button>
-          <button className="btn btn-outline">Learn More</button>
+          <button className="btn btn-primary" onClick={() => navigate('/donor/dashboard')}>Support Our Mission</button>
+          <button className="btn btn-outline" onClick={() => navigate('/donor')}>View Our Impact</button>
         </div>
       </section>
 
