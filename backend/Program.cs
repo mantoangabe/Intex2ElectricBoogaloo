@@ -1,7 +1,11 @@
-var builder = WebApplication.CreateBuilder(args);
+using backend.Data;
+using Microsoft.EntityFrameworkCore;
 
+var builder = WebApplication.CreateBuilder(args);
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+builder.Services.AddDbContext<IntexDbContext>(options =>
+    options.UseNpgsql(connectionString));
 builder.Services.AddControllers();
-builder.Services.AddOpenApi();
 
 builder.Services.AddCors(options =>
 {
@@ -17,7 +21,6 @@ var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
     app.UseCors("DevCors");
 }
 
