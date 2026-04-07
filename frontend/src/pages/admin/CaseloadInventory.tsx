@@ -15,15 +15,36 @@ interface Resident {
 
 export default function CaseloadInventory() {
   const [residents, setResidents] = useState<Resident[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [skip, setSkip] = useState(0);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
 
-  useEffect(() => {
-    apiClient.get<Resident[]>('/Residents')
-      .then(res => setResidents(res.data))
+  const fetchResidents = (skipVal: number) => {
+    setLoading(true);
+    apiClient.get<Resident[]>('/Residents', { params: { skip: skipVal, take: 25 } })
+      .then(res => {
+        setHasMore(res.data.length === 25);
+        if (skipVal === 0) {
+          setResidents(res.data);
+        } else {
+          setResidents(prev => [...prev, ...res.data]);
+        }
+        setError(null);
+      })
       .catch(() => setError('Failed to load residents.'))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchResidents(0);
   }, []);
+
+  const handleShowMore = () => {
+    const newSkip = skip + 25;
+    setSkip(newSkip);
+    fetchResidents(newSkip);
+  };
 
   return (
     <AdminLayout title="Caseload Inventory">
@@ -72,16 +93,13 @@ export default function CaseloadInventory() {
             </tr>
           </thead>
           <tbody>
-            {loading && (
-              <tr><td colSpan={8} className="placeholder-row">Loading...</td></tr>
-            )}
             {error && (
               <tr><td colSpan={8} className="placeholder-row">{error}</td></tr>
             )}
-            {!loading && !error && residents.length === 0 && (
+            {residents.length === 0 && !error && (
               <tr><td colSpan={8} className="placeholder-row">No residents found.</td></tr>
             )}
-            {!loading && !error && residents.map(r => (
+            {residents.map(r => (
               <tr key={r.residentId}>
                 <td>{r.residentId}</td>
                 <td>{r.caseControlNo}</td>
@@ -95,6 +113,13 @@ export default function CaseloadInventory() {
             ))}
           </tbody>
         </table>
+        {hasMore && (
+          <div style={{ textAlign: 'center', marginTop: '1rem' }}>
+            <button className="btn btn-secondary" onClick={handleShowMore} disabled={loading}>
+              {loading ? 'Loading...' : 'Show More'}
+            </button>
+          </div>
+        )}
       </div>
     </AdminLayout>
   );

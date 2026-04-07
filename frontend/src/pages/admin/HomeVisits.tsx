@@ -15,15 +15,36 @@ interface HomeVisitation {
 
 export default function HomeVisits() {
   const [visits, setVisits] = useState<HomeVisitation[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [skip, setSkip] = useState(0);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
 
-  useEffect(() => {
-    apiClient.get<HomeVisitation[]>('/HomeVisitations')
-      .then(res => setVisits(res.data))
+  const fetchVisits = (skipVal: number) => {
+    setLoading(true);
+    apiClient.get<HomeVisitation[]>('/HomeVisitations', { params: { skip: skipVal, take: 25 } })
+      .then(res => {
+        setHasMore(res.data.length === 25);
+        if (skipVal === 0) {
+          setVisits(res.data);
+        } else {
+          setVisits(prev => [...prev, ...res.data]);
+        }
+        setError(null);
+      })
       .catch(() => setError('Failed to load home visitations.'))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchVisits(0);
   }, []);
+
+  const handleShowMore = () => {
+    const newSkip = skip + 25;
+    setSkip(newSkip);
+    fetchVisits(newSkip);
+  };
 
   return (
     <AdminLayout title="Home Visitation & Case Conferences">
@@ -64,16 +85,13 @@ export default function HomeVisits() {
             </tr>
           </thead>
           <tbody>
-            {loading && (
-              <tr><td colSpan={7} className="placeholder-row">Loading...</td></tr>
-            )}
             {error && (
               <tr><td colSpan={7} className="placeholder-row">{error}</td></tr>
             )}
-            {!loading && !error && visits.length === 0 && (
+            {visits.length === 0 && !error && (
               <tr><td colSpan={7} className="placeholder-row">No visits recorded yet. Click "Log Visit" to create a new record.</td></tr>
             )}
-            {!loading && !error && visits.map(v => (
+            {visits.map(v => (
               <tr key={v.visitationId}>
                 <td>{new Date(v.visitDate).toLocaleDateString()}</td>
                 <td>{v.residentId}</td>
@@ -86,6 +104,13 @@ export default function HomeVisits() {
             ))}
           </tbody>
         </table>
+        {hasMore && (
+          <div style={{ textAlign: 'center', marginTop: '1rem' }}>
+            <button className="btn btn-secondary" onClick={handleShowMore} disabled={loading}>
+              {loading ? 'Loading...' : 'Show More'}
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="admin-card">

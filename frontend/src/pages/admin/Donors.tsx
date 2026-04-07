@@ -23,21 +23,61 @@ interface Donation {
 export default function Donors() {
   const [supporters, setSupporters] = useState<Supporter[]>([]);
   const [donations, setDonations] = useState<Donation[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [supporterSkip, setSupporterSkip] = useState(0);
+  const [donationSkip, setDonationSkip] = useState(0);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [supporterHasMore, setSupporterHasMore] = useState(false);
+  const [donationHasMore, setDonationHasMore] = useState(false);
+
+  const fetchSupporters = (skip: number) => {
+    setLoading(true);
+    apiClient.get<Supporter[]>('/Supporters', { params: { skip, take: 25 } })
+      .then(res => {
+        setSupporterHasMore(res.data.length === 25);
+        if (skip === 0) {
+          setSupporters(res.data);
+        } else {
+          setSupporters(prev => [...prev, ...res.data]);
+        }
+        setError(null);
+      })
+      .catch(() => setError('Failed to load donors.'))
+      .finally(() => setLoading(false));
+  };
+
+  const fetchDonations = (skip: number) => {
+    setLoading(true);
+    apiClient.get<Donation[]>('/Donations', { params: { skip, take: 25 } })
+      .then(res => {
+        setDonationHasMore(res.data.length === 25);
+        if (skip === 0) {
+          setDonations(res.data);
+        } else {
+          setDonations(prev => [...prev, ...res.data]);
+        }
+        setError(null);
+      })
+      .catch(() => setError('Failed to load donations.'))
+      .finally(() => setLoading(false));
+  };
 
   useEffect(() => {
-    Promise.all([
-      apiClient.get<Supporter[]>('/Supporters'),
-      apiClient.get<Donation[]>('/Donations'),
-    ])
-      .then(([supRes, donRes]) => {
-        setSupporters(supRes.data);
-        setDonations(donRes.data);
-      })
-      .catch(() => setError('Failed to load donor data.'))
-      .finally(() => setLoading(false));
+    fetchSupporters(0);
+    fetchDonations(0);
   }, []);
+
+  const handleShowMoreSupporters = () => {
+    const newSkip = supporterSkip + 25;
+    setSupporterSkip(newSkip);
+    fetchSupporters(newSkip);
+  };
+
+  const handleShowMoreDonations = () => {
+    const newSkip = donationSkip + 25;
+    setDonationSkip(newSkip);
+    fetchDonations(newSkip);
+  };
 
   const totalBySupporterId = donations.reduce<Record<number, number>>((acc, d) => {
     const val = d.amount ?? d.estimatedValue ?? 0;
@@ -83,16 +123,13 @@ export default function Donors() {
             </tr>
           </thead>
           <tbody>
-            {loading && (
-              <tr><td colSpan={5} className="placeholder-row">Loading...</td></tr>
-            )}
             {error && (
               <tr><td colSpan={5} className="placeholder-row">{error}</td></tr>
             )}
-            {!loading && !error && supporters.length === 0 && (
-              <tr><td colSpan={5} className="placeholder-row">No donors yet. Click "Add Donor" to create a new record.</td></tr>
+            {supporters.length === 0 && !error && (
+              <tr><td colSpan={5} className="placeholder-row">No donors found.</td></tr>
             )}
-            {!loading && !error && supporters.map(s => (
+            {supporters.map(s => (
               <tr key={s.supporterId}>
                 <td>{s.displayName}</td>
                 <td>{s.supporterType}</td>
@@ -103,6 +140,13 @@ export default function Donors() {
             ))}
           </tbody>
         </table>
+        {supporterHasMore && (
+          <div style={{ textAlign: 'center', marginTop: '1rem' }}>
+            <button className="btn btn-secondary" onClick={handleShowMoreSupporters} disabled={loading}>
+              {loading ? 'Loading...' : 'Show More'}
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="admin-card">
@@ -118,13 +162,10 @@ export default function Donors() {
             </tr>
           </thead>
           <tbody>
-            {loading && (
-              <tr><td colSpan={5} className="placeholder-row">Loading...</td></tr>
-            )}
-            {!loading && !error && donations.length === 0 && (
+            {donations.length === 0 && !error && (
               <tr><td colSpan={5} className="placeholder-row">No donations recorded.</td></tr>
             )}
-            {!loading && !error && donations.map(d => (
+            {donations.map(d => (
               <tr key={d.donationId}>
                 <td>{d.donationId}</td>
                 <td>{d.supporterId}</td>
@@ -135,6 +176,13 @@ export default function Donors() {
             ))}
           </tbody>
         </table>
+        {donationHasMore && (
+          <div style={{ textAlign: 'center', marginTop: '1rem' }}>
+            <button className="btn btn-secondary" onClick={handleShowMoreDonations} disabled={loading}>
+              {loading ? 'Loading...' : 'Show More'}
+            </button>
+          </div>
+        )}
       </div>
     </AdminLayout>
   );

@@ -15,15 +15,36 @@ interface ProcessRecording {
 
 export default function ProcessRecording() {
   const [recordings, setRecordings] = useState<ProcessRecording[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [skip, setSkip] = useState(0);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
 
-  useEffect(() => {
-    apiClient.get<ProcessRecording[]>('/ProcessRecordings')
-      .then(res => setRecordings(res.data))
+  const fetchRecordings = (skipVal: number) => {
+    setLoading(true);
+    apiClient.get<ProcessRecording[]>('/ProcessRecordings', { params: { skip: skipVal, take: 25 } })
+      .then(res => {
+        setHasMore(res.data.length === 25);
+        if (skipVal === 0) {
+          setRecordings(res.data);
+        } else {
+          setRecordings(prev => [...prev, ...res.data]);
+        }
+        setError(null);
+      })
       .catch(() => setError('Failed to load process recordings.'))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchRecordings(0);
   }, []);
+
+  const handleShowMore = () => {
+    const newSkip = skip + 25;
+    setSkip(newSkip);
+    fetchRecordings(newSkip);
+  };
 
   return (
     <AdminLayout title="Process Recording">
@@ -58,16 +79,13 @@ export default function ProcessRecording() {
             </tr>
           </thead>
           <tbody>
-            {loading && (
-              <tr><td colSpan={7} className="placeholder-row">Loading...</td></tr>
-            )}
             {error && (
               <tr><td colSpan={7} className="placeholder-row">{error}</td></tr>
             )}
-            {!loading && !error && recordings.length === 0 && (
+            {recordings.length === 0 && !error && (
               <tr><td colSpan={7} className="placeholder-row">No session records found.</td></tr>
             )}
-            {!loading && !error && recordings.map(r => (
+            {recordings.map(r => (
               <tr key={r.recordingId}>
                 <td>{new Date(r.sessionDate).toLocaleDateString()}</td>
                 <td>{r.residentId}</td>
@@ -80,6 +98,13 @@ export default function ProcessRecording() {
             ))}
           </tbody>
         </table>
+        {hasMore && (
+          <div style={{ textAlign: 'center', marginTop: '1rem' }}>
+            <button className="btn btn-secondary" onClick={handleShowMore} disabled={loading}>
+              {loading ? 'Loading...' : 'Show More'}
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="admin-card">

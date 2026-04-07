@@ -23,7 +23,7 @@ namespace backend.Controllers
 
         // GET: api/Safehouses?name=Alpha
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Safehouse>>> GetSafehouses([FromQuery] string? name)
+        public async Task<ActionResult<IEnumerable<Safehouse>>> GetSafehouses([FromQuery] string? name, [FromQuery] int skip = 0, [FromQuery] int take = 25)
         {
             IQueryable<Safehouse> query = _context.Safehouses;
 
@@ -32,7 +32,7 @@ namespace backend.Controllers
                 query = query.Where(s => s.Name.ToLower().Contains(name.ToLower()));
             }
 
-            return await query.ToListAsync();
+            return await query.Skip(skip).Take(take).ToListAsync();
         }
 
         // GET: api/Safehouses/5

@@ -23,9 +23,9 @@ namespace backend.Controllers
 
         // GET: api/SocialMediaPosts
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<SocialMediaPost>>> GetSocialMediaPosts()
+        public async Task<ActionResult<IEnumerable<SocialMediaPost>>> GetSocialMediaPosts([FromQuery] int skip = 0, [FromQuery] int take = 25)
         {
-            return await _context.SocialMediaPosts.ToListAsync();
+            return await _context.SocialMediaPosts.Skip(skip).Take(take).ToListAsync();
         }
 
         // GET: api/SocialMediaPosts/5

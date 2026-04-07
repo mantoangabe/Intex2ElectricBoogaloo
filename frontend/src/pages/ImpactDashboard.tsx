@@ -13,15 +13,36 @@ interface Safehouse {
 export default function ImpactDashboard() {
   const navigate = useNavigate();
   const [safehouses, setSafehouses] = useState<Safehouse[]>([]);
+  const [skip, setSkip] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
 
-  useEffect(() => {
-    apiClient.get<Safehouse[]>('/Safehouses')
-      .then(res => setSafehouses(res.data))
+  const fetchSafehouses = (skipVal: number) => {
+    setLoading(true);
+    apiClient.get<Safehouse[]>('/Safehouses', { params: { skip: skipVal, take: 25 } })
+      .then(res => {
+        setHasMore(res.data.length === 25);
+        if (skipVal === 0) {
+          setSafehouses(res.data);
+        } else {
+          setSafehouses(prev => [...prev, ...res.data]);
+        }
+        setError(null);
+      })
       .catch(() => setError('Failed to load safehouse data.'))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchSafehouses(0);
   }, []);
+
+  const handleShowMore = () => {
+    const newSkip = skip + 25;
+    setSkip(newSkip);
+    fetchSafehouses(newSkip);
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
@@ -77,6 +98,13 @@ export default function ImpactDashboard() {
               ))}
             </tbody>
           </table>
+          {hasMore && (
+            <div style={{ textAlign: 'center', marginTop: '1rem' }}>
+              <button className="btn btn-secondary" onClick={handleShowMore} disabled={loading}>
+                {loading ? 'Loading...' : 'Show More'}
+              </button>
+            </div>
+          )}
         </div>
       </main>
 

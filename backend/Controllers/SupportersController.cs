@@ -23,9 +23,9 @@ namespace backend.Controllers
 
         // GET: api/Supporters
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Supporter>>> GetSupporters()
+        public async Task<ActionResult<IEnumerable<Supporter>>> GetSupporters([FromQuery] int skip = 0, [FromQuery] int take = 25)
         {
-            return await _context.Supporters.ToListAsync();
+            return await _context.Supporters.Skip(skip).Take(take).ToListAsync();
         }
 
         // GET: api/Supporters/5

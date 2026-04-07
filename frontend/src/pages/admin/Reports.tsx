@@ -20,21 +20,39 @@ interface Resident {
 export default function Reports() {
   const [metrics, setMetrics] = useState<SafehouseMonthlyMetric[]>([]);
   const [residents, setResidents] = useState<Resident[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [skip, setSkip] = useState(0);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+
+  const fetchMetrics = (skipVal: number) => {
+    setLoading(true);
+    apiClient.get<SafehouseMonthlyMetric[]>('/SafehouseMonthlyMetrics', { params: { skip: skipVal, take: 25 } })
+      .then(res => {
+        setHasMore(res.data.length === 25);
+        if (skipVal === 0) {
+          setMetrics(res.data);
+        } else {
+          setMetrics(prev => [...prev, ...res.data]);
+        }
+        setError(null);
+      })
+      .catch(() => setError('Failed to load metrics.'))
+      .finally(() => setLoading(false));
+  };
 
   useEffect(() => {
-    Promise.all([
-      apiClient.get<SafehouseMonthlyMetric[]>('/SafehouseMonthlyMetrics'),
-      apiClient.get<Resident[]>('/Residents'),
-    ])
-      .then(([metricsRes, residentsRes]) => {
-        setMetrics(metricsRes.data);
-        setResidents(residentsRes.data);
-      })
-      .catch(() => setError('Failed to load reports data.'))
-      .finally(() => setLoading(false));
+    apiClient.get<Resident[]>('/Residents', { params: { skip: 0, take: 1000 } })
+      .then(res => setResidents(res.data))
+      .catch(() => {});
+    fetchMetrics(0);
   }, []);
+
+  const handleShowMore = () => {
+    const newSkip = skip + 25;
+    setSkip(newSkip);
+    fetchMetrics(newSkip);
+  };
 
   const avgEducation = metrics.length
     ? (metrics.reduce((sum, m) => sum + (m.avgEducationProgress ?? 0), 0) / metrics.length).toFixed(1)
@@ -78,16 +96,13 @@ export default function Reports() {
             </tr>
           </thead>
           <tbody>
-            {loading && (
-              <tr><td colSpan={5} className="placeholder-row">Loading...</td></tr>
-            )}
             {error && (
               <tr><td colSpan={5} className="placeholder-row">{error}</td></tr>
             )}
-            {!loading && !error && metrics.length === 0 && (
+            {metrics.length === 0 && !error && (
               <tr><td colSpan={5} className="placeholder-row">No metrics recorded yet.</td></tr>
             )}
-            {!loading && !error && metrics.map(m => (
+            {metrics.map(m => (
               <tr key={m.metricId}>
                 <td>{new Date(m.monthStart).toLocaleDateString('en-US', { year: 'numeric', month: 'short' })}</td>
                 <td>{m.safehouseId}</td>
@@ -98,6 +113,13 @@ export default function Reports() {
             ))}
           </tbody>
         </table>
+        {hasMore && (
+          <div style={{ textAlign: 'center', marginTop: '1rem' }}>
+            <button className="btn btn-secondary" onClick={handleShowMore} disabled={loading}>
+              {loading ? 'Loading...' : 'Show More'}
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="admin-card">
@@ -112,15 +134,15 @@ export default function Reports() {
           <tbody>
             <tr>
               <td>Avg Education Progress</td>
-              <td>{loading ? '...' : avgEducation}</td>
+              <td>{avgEducation}</td>
             </tr>
             <tr>
               <td>Avg Health Score</td>
-              <td>{loading ? '...' : avgHealth}</td>
+              <td>{avgHealth}</td>
             </tr>
             <tr>
               <td>Reintegration Success Rate</td>
-              <td>{loading ? '...' : reintegrationRate}</td>
+              <td>{reintegrationRate}</td>
             </tr>
           </tbody>
         </table>

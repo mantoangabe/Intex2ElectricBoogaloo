@@ -23,9 +23,9 @@ namespace backend.Controllers
 
         // GET: api/HomeVisitations
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<HomeVisitation>>> GetHomeVisitations()
+        public async Task<ActionResult<IEnumerable<HomeVisitation>>> GetHomeVisitations([FromQuery] int skip = 0, [FromQuery] int take = 25)
         {
-            return await _context.HomeVisitations.ToListAsync();
+            return await _context.HomeVisitations.Skip(skip).Take(take).ToListAsync();
         }
 
         // GET: api/HomeVisitations/5

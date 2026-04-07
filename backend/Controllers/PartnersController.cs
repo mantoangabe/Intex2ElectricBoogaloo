@@ -23,9 +23,9 @@ namespace backend.Controllers
 
         // GET: api/Partners
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Partner>>> GetPartners()
+        public async Task<ActionResult<IEnumerable<Partner>>> GetPartners([FromQuery] int skip = 0, [FromQuery] int take = 25)
         {
-            return await _context.Partners.ToListAsync();
+            return await _context.Partners.Skip(skip).Take(take).ToListAsync();
         }
 
         // GET: api/Partners/5
