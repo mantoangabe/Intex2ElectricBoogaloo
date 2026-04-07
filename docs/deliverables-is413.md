@@ -11,6 +11,10 @@ Build all the required pages with all the required functionality (including, but
 * **Login Page:**  Allows users to authenticate using a username and password, with proper validation and error handling.   
 * **Privacy Policy \+ Cookie Consent:**  Provides a privacy policy explaining data usage and includes a GDPR-compliant cookie consent notification (see the IS414 section for more information). 
 
+* **Donor**
+Donor Dashboard:  Allows an authenticated donor to donate and to view their donation history.  (We obviously do not want to tie into a real payment service, but we can take a fake donation and add it into our database.)
+
+
 **Admin / Staff Portal (Authenticated Users Only)** 
 
 * **Admin Dashboard:** Provides a high-level overview of key metrics such as active residents across safehouses, recent donations, upcoming case conferences, and summarized progress data. Think of this as the "command center" for staff managing daily operations.  
