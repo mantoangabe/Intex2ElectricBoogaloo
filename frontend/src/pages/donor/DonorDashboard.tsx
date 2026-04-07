@@ -1,9 +1,8 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import Navbar from '../../components/Navbar';
 import '../../styles/styles.css';
 
 export default function DonorDashboard() {
-  const navigate = useNavigate();
   const [donationAmount, setDonationAmount] = useState('');
   const [donationType, setDonationType] = useState('Monetary');
   const [programArea, setProgramArea] = useState('General');
@@ -19,20 +18,7 @@ export default function DonorDashboard() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      <nav className="navbar">
-        <span className="navbar-brand">SafeHaven PH</span>
-        <div className="navbar-links">
-          <a href="/donor">Impact</a>
-          <a href="/">Home</a>
-          <button
-            className="btn btn-primary"
-            onClick={() => navigate('/')}
-            style={{ marginLeft: '1rem', padding: '0.5rem 1.25rem' }}
-          >
-            Logout
-          </button>
-        </div>
-      </nav>
+      <Navbar />
 
       <main style={{ flex: 1, padding: '2rem', maxWidth: '1000px', margin: '0 auto', width: '100%' }}>
         <div className="page-header">

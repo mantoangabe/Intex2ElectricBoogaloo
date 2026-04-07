@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import Navbar from '../../components/Navbar';
 import '../../styles/styles.css';
 import apiClient from '../../api/apiClient';
 
@@ -46,20 +46,7 @@ export default function DonorImpact() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      <nav className="navbar">
-        <span className="navbar-brand">SafeHaven PH</span>
-        <div className="navbar-links">
-          <a href="/donor" style={{ color: 'var(--primary)' }}>Impact</a>
-          <a href="/">Home</a>
-          <button
-            className="btn btn-primary"
-            onClick={() => navigate('/login')}
-            style={{ marginLeft: '1rem', padding: '0.5rem 1.25rem' }}
-          >
-            Staff Login
-          </button>
-        </div>
-      </nav>
+      <Navbar />
 
       <main style={{ flex: 1, padding: '2rem' }}>
         <h1 style={{ textAlign: 'center', color: 'var(--text)', marginBottom: '0.5rem' }}>

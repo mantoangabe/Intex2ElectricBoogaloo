@@ -1,4 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom';
+import Navbar from './Navbar';
 import '../styles/styles.css';
 
 interface AdminLayoutProps {
@@ -21,12 +22,7 @@ export default function AdminLayout({ title, children }: AdminLayoutProps) {
 
   return (
     <div className="admin-container">
-      <header className="admin-header">
-        <h1>{title}</h1>
-        <button className="logout-btn" onClick={() => navigate('/')}>
-          Logout
-        </button>
-      </header>
+      <Navbar title={title} showLogout={true} />
       <div className="admin-layout">
         <aside className="admin-sidebar">
           <nav>

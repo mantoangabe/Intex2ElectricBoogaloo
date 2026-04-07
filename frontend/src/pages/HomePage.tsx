@@ -1,17 +1,10 @@
-import { useNavigate } from 'react-router-dom';
+import Navbar from '../components/Navbar';
 import '../styles/HomePage.css';
 
 export default function HomePage() {
-  const navigate = useNavigate();
-
   return (
     <div className="home">
-      <nav className="navbar">
-        <span className="navbar-brand">SafeHaven PH</span>
-        <button className="navbar-btn" onClick={() => navigate('/login')}>
-          Staff Login
-        </button>
-      </nav>
+      <Navbar />
 
       <section className="hero-section">
         <h1>Restoring Hope, Rebuilding Lives</h1>
