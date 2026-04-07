@@ -23,9 +23,9 @@ namespace backend.Controllers
 
         // GET: api/Residents
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Resident>>> GetResidents()
+        public async Task<ActionResult<IEnumerable<Resident>>> GetResidents([FromQuery] int skip = 0, [FromQuery] int take = 25)
         {
-            return await _context.Residents.ToListAsync();
+            return await _context.Residents.Skip(skip).Take(take).ToListAsync();
         }
 
         // GET: api/Residents/5

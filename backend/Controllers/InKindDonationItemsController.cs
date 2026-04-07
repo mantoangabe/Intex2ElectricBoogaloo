@@ -23,9 +23,9 @@ namespace backend.Controllers
 
         // GET: api/InKindDonationItems
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<InKindDonationItem>>> GetInKindDonationItems()
+        public async Task<ActionResult<IEnumerable<InKindDonationItem>>> GetInKindDonationItems([FromQuery] int skip = 0, [FromQuery] int take = 25)
         {
-            return await _context.InKindDonationItems.ToListAsync();
+            return await _context.InKindDonationItems.Skip(skip).Take(take).ToListAsync();
         }
 
         // GET: api/InKindDonationItems/5

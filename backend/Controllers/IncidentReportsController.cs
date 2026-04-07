@@ -23,9 +23,9 @@ namespace backend.Controllers
 
         // GET: api/IncidentReports
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<IncidentReport>>> GetIncidentReports()
+        public async Task<ActionResult<IEnumerable<IncidentReport>>> GetIncidentReports([FromQuery] int skip = 0, [FromQuery] int take = 25)
         {
-            return await _context.IncidentReports.ToListAsync();
+            return await _context.IncidentReports.Skip(skip).Take(take).ToListAsync();
         }
 
         // GET: api/IncidentReports/5

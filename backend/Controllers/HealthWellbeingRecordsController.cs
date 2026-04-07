@@ -23,9 +23,9 @@ namespace backend.Controllers
 
         // GET: api/HealthWellbeingRecords
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<HealthWellbeingRecord>>> GetHealthWellbeingRecords()
+        public async Task<ActionResult<IEnumerable<HealthWellbeingRecord>>> GetHealthWellbeingRecords([FromQuery] int skip = 0, [FromQuery] int take = 25)
         {
-            return await _context.HealthWellbeingRecords.ToListAsync();
+            return await _context.HealthWellbeingRecords.Skip(skip).Take(take).ToListAsync();
         }
 
         // GET: api/HealthWellbeingRecords/5

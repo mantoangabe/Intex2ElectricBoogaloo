@@ -1,7 +1,27 @@
+import { useEffect, useState } from 'react';
 import AdminLayout from '../components/AdminLayout';
 import '../styles/AdminDashboard.css';
+import apiClient from '../api/apiClient';
 
 export default function AdminDashboard() {
+  const [residentCount, setResidentCount] = useState<number | null>(null);
+  const [supporterCount, setSupporterCount] = useState<number | null>(null);
+  const [donationTotal, setDonationTotal] = useState<number | null>(null);
+  const [safehouseCount, setSafehouseCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    apiClient.get('/Residents').then(r => setResidentCount(r.data.length));
+    apiClient.get('/Supporters').then(r => setSupporterCount(r.data.length));
+    apiClient.get('/Donations').then(r => {
+      const total = r.data.reduce((sum: number, d: { amount?: number; estimatedValue?: number }) =>
+        sum + (d.amount ?? d.estimatedValue ?? 0), 0);
+      setDonationTotal(total);
+    });
+    apiClient.get('/Safehouses').then(r => setSafehouseCount(r.data.length));
+  }, []);
+
+  const fmt = (val: number | null) => val === null ? '...' : val.toLocaleString();
+
   return (
     <AdminLayout title="SafeHaven Admin Dashboard">
       <div className="admin-welcome">
@@ -10,45 +30,22 @@ export default function AdminDashboard() {
       </div>
 
       <div className="metrics-grid">
-        {[
-          { label: 'Active Residents', value: '48' },
-          { label: 'Total Donors', value: '127' },
-          { label: 'This Month Donations', value: '$12,450' },
-          { label: 'Pending Cases', value: '12' }
-        ].map((metric) => (
-          <div key={metric.label} className="metric-card">
-            <div className="metric-value">{metric.value}</div>
-            <div className="metric-label">{metric.label}</div>
-          </div>
-        ))}
-      </div>
-
-      <div className="admin-card">
-        <h3>Recent Activity</h3>
-        <table className="admin-table">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Event</th>
-              <th>User</th>
-            </tr>
-          </thead>
-          <tbody>
-            {[
-              { date: '2026-04-06', event: 'New resident admission', user: 'Ma. Santos' },
-              { date: '2026-04-05', event: 'Donation recorded', user: 'J. Dela Cruz' },
-              { date: '2026-04-04', event: 'Case conference scheduled', user: 'R. Aquino' },
-              { date: '2026-04-03', event: 'Process recording submitted', user: 'Ma. Santos' },
-              { date: '2026-04-02', event: 'Home visit completed', user: 'L. Reyes' }
-            ].map((row, idx) => (
-              <tr key={idx}>
-                <td>{row.date}</td>
-                <td>{row.event}</td>
-                <td>{row.user}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="metric-card">
+          <div className="metric-value">{fmt(residentCount)}</div>
+          <div className="metric-label">Total Residents</div>
+        </div>
+        <div className="metric-card">
+          <div className="metric-value">{fmt(supporterCount)}</div>
+          <div className="metric-label">Total Supporters</div>
+        </div>
+        <div className="metric-card">
+          <div className="metric-value">{donationTotal === null ? '...' : `$${donationTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</div>
+          <div className="metric-label">Total Donations</div>
+        </div>
+        <div className="metric-card">
+          <div className="metric-value">{fmt(safehouseCount)}</div>
+          <div className="metric-label">Active Safehouses</div>
+        </div>
       </div>
 
       <div className="admin-card">

@@ -23,9 +23,9 @@ namespace backend.Controllers
 
         // GET: api/PublicImpactSnapshots
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<PublicImpactSnapshot>>> GetPublicImpactSnapshots()
+        public async Task<ActionResult<IEnumerable<PublicImpactSnapshot>>> GetPublicImpactSnapshots([FromQuery] int skip = 0, [FromQuery] int take = 25)
         {
-            return await _context.PublicImpactSnapshots.ToListAsync();
+            return await _context.PublicImpactSnapshots.Skip(skip).Take(take).ToListAsync();
         }
 
         // GET: api/PublicImpactSnapshots/5

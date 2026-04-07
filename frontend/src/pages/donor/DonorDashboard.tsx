@@ -1,9 +1,8 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import Navbar from '../../components/Navbar';
 import '../../styles/styles.css';
 
 export default function DonorDashboard() {
-  const navigate = useNavigate();
   const [donationAmount, setDonationAmount] = useState('');
   const [donationType, setDonationType] = useState('Monetary');
   const [programArea, setProgramArea] = useState('General');
@@ -11,8 +10,6 @@ export default function DonorDashboard() {
 
   const handleDonate = (e: React.FormEvent) => {
     e.preventDefault();
-    // Fake donation handling - just reset form
-    alert(`Thank you for your ${donationAmount ? donationType.toLowerCase() + ' donation!' : 'support!'}`);
     setDonationAmount('');
     setDonationType('Monetary');
     setProgramArea('General');
@@ -21,20 +18,7 @@ export default function DonorDashboard() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      <nav className="navbar">
-        <span className="navbar-brand">SafeHaven PH</span>
-        <div className="navbar-links">
-          <a href="/donor">Impact</a>
-          <a href="/">Home</a>
-          <button
-            className="btn btn-primary"
-            onClick={() => navigate('/')}
-            style={{ marginLeft: '1rem', padding: '0.5rem 1.25rem' }}
-          >
-            Logout
-          </button>
-        </div>
-      </nav>
+      <Navbar />
 
       <main style={{ flex: 1, padding: '2rem', maxWidth: '1000px', margin: '0 auto', width: '100%' }}>
         <div className="page-header">
@@ -44,33 +28,6 @@ export default function DonorDashboard() {
               Manage your contributions and view your impact
             </p>
           </div>
-        </div>
-
-        {/* Donation Summary */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-          {[
-            { label: 'Total Donated', value: '$2,500' },
-            { label: 'Number of Donations', value: '8' },
-            { label: 'Last Donation', value: 'Mar 28, 2026' },
-          ].map((stat) => (
-            <div
-              key={stat.label}
-              style={{
-                background: 'var(--white)',
-                padding: '1.5rem',
-                borderRadius: '8px',
-                boxShadow: 'var(--shadow-sm)',
-                borderTop: '4px solid var(--primary)',
-              }}
-            >
-              <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--primary)', marginBottom: '0.25rem' }}>
-                {stat.value}
-              </div>
-              <div style={{ color: 'var(--text-muted)', fontWeight: 600, fontSize: '0.9rem' }}>
-                {stat.label}
-              </div>
-            </div>
-          ))}
         </div>
 
         {/* Make a Donation Form */}

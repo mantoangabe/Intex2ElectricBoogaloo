@@ -23,9 +23,9 @@ namespace backend.Controllers
 
         // GET: api/ProcessRecordings
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<ProcessRecording>>> GetProcessRecordings()
+        public async Task<ActionResult<IEnumerable<ProcessRecording>>> GetProcessRecordings([FromQuery] int skip = 0, [FromQuery] int take = 25)
         {
-            return await _context.ProcessRecordings.ToListAsync();
+            return await _context.ProcessRecordings.Skip(skip).Take(take).ToListAsync();
         }
 
         // GET: api/ProcessRecordings/5

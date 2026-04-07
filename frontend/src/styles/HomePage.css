@@ -4,39 +4,6 @@
   min-height: 100vh;
 }
 
-/* ─── Navbar ─────────────────────────────────────────────────────────── */
-.navbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem 2rem;
-  background: var(--white);
-  box-shadow: var(--shadow-sm);
-  position: sticky;
-  top: 0;
-  z-index: 10;
-}
-
-.navbar-brand {
-  font-weight: 700;
-  font-size: 1.25rem;
-  color: var(--text);
-}
-
-.navbar-btn {
-  background: var(--primary);
-  color: var(--white);
-  border: none;
-  padding: 0.5rem 1.25rem;
-  border-radius: 6px;
-  font-weight: 600;
-  transition: background 0.2s;
-}
-
-.navbar-btn:hover {
-  background: var(--primary-dark);
-}
-
 /* ─── Hero Section ────────────────────────────────────────────────────── */
 .hero-section {
   background: linear-gradient(135deg, var(--primary) 0%, #00a499 100%);
@@ -174,14 +141,6 @@
 
 /* ─── Responsive ─────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
-  .navbar {
-    padding: 1rem;
-  }
-
-  .navbar-brand {
-    font-size: 1rem;
-  }
-
   .hero-section {
     padding: 3rem 1rem;
   }

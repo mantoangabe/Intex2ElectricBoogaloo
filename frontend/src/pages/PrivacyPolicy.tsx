@@ -1,25 +1,10 @@
-import { useNavigate } from 'react-router-dom';
+import Navbar from '../components/Navbar';
 import '../styles/styles.css';
 
 export default function PrivacyPolicy() {
-  const navigate = useNavigate();
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      <nav className="navbar">
-        <span className="navbar-brand">SafeHaven PH</span>
-        <div className="navbar-links">
-          <a href="/">Home</a>
-          <a href="/impact">Impact</a>
-          <button
-            className="btn btn-primary"
-            onClick={() => navigate('/login')}
-            style={{ marginLeft: '1rem', padding: '0.5rem 1.25rem' }}
-          >
-            Staff Login
-          </button>
-        </div>
-      </nav>
+      <Navbar />
 
       <main style={{ flex: 1, padding: '2rem', maxWidth: '900px', margin: '0 auto' }}>
         <h1 style={{ color: 'var(--text)' }}>Privacy Policy</h1>

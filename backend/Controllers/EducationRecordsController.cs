@@ -23,9 +23,9 @@ namespace backend.Controllers
 
         // GET: api/EducationRecords
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<EducationRecord>>> GetEducationRecords()
+        public async Task<ActionResult<IEnumerable<EducationRecord>>> GetEducationRecords([FromQuery] int skip = 0, [FromQuery] int take = 25)
         {
-            return await _context.EducationRecords.ToListAsync();
+            return await _context.EducationRecords.Skip(skip).Take(take).ToListAsync();
         }
 
         // GET: api/EducationRecords/5
