@@ -10,10 +10,9 @@ const navLinks = [
 
 interface NavbarProps {
   title?: string;
-  showLogout?: boolean;
 }
 
-export default function Navbar({ title, showLogout = false }: NavbarProps) {
+export default function Navbar({ title }: NavbarProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const isAdmin = title !== undefined;
