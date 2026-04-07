@@ -1,7 +1,30 @@
+import { useEffect, useState } from 'react';
 import AdminLayout from '../../components/AdminLayout';
 import '../../styles/styles.css';
+import apiClient from '../../api/apiClient';
+
+interface Resident {
+  residentId: number;
+  caseControlNo: string;
+  presentAge: string;
+  caseCategory: string;
+  safehouseId: number;
+  caseStatus: string;
+  assignedSocialWorker: string;
+}
 
 export default function CaseloadInventory() {
+  const [residents, setResidents] = useState<Resident[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    apiClient.get<Resident[]>('/Residents')
+      .then(res => setResidents(res.data))
+      .catch(() => setError('Failed to load residents.'))
+      .finally(() => setLoading(false));
+  }, []);
+
   return (
     <AdminLayout title="Caseload Inventory">
       <div className="page-header">
@@ -39,7 +62,7 @@ export default function CaseloadInventory() {
           <thead>
             <tr>
               <th>ID</th>
-              <th>Name</th>
+              <th>Case Control No.</th>
               <th>Age</th>
               <th>Case Category</th>
               <th>Safehouse</th>
@@ -49,11 +72,27 @@ export default function CaseloadInventory() {
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <td colSpan={8} className="placeholder-row">
-                No residents yet. Click "New Resident" to create a profile.
-              </td>
-            </tr>
+            {loading && (
+              <tr><td colSpan={8} className="placeholder-row">Loading...</td></tr>
+            )}
+            {error && (
+              <tr><td colSpan={8} className="placeholder-row">{error}</td></tr>
+            )}
+            {!loading && !error && residents.length === 0 && (
+              <tr><td colSpan={8} className="placeholder-row">No residents found.</td></tr>
+            )}
+            {!loading && !error && residents.map(r => (
+              <tr key={r.residentId}>
+                <td>{r.residentId}</td>
+                <td>{r.caseControlNo}</td>
+                <td>{r.presentAge}</td>
+                <td>{r.caseCategory}</td>
+                <td>{r.safehouseId}</td>
+                <td>{r.caseStatus}</td>
+                <td>{r.assignedSocialWorker}</td>
+                <td><button className="btn btn-sm">View</button></td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>

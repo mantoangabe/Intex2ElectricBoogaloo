@@ -11,8 +11,6 @@ export default function DonorDashboard() {
 
   const handleDonate = (e: React.FormEvent) => {
     e.preventDefault();
-    // Fake donation handling - just reset form
-    alert(`Thank you for your ${donationAmount ? donationType.toLowerCase() + ' donation!' : 'support!'}`);
     setDonationAmount('');
     setDonationType('Monetary');
     setProgramArea('General');
@@ -44,33 +42,6 @@ export default function DonorDashboard() {
               Manage your contributions and view your impact
             </p>
           </div>
-        </div>
-
-        {/* Donation Summary */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-          {[
-            { label: 'Total Donated', value: '$2,500' },
-            { label: 'Number of Donations', value: '8' },
-            { label: 'Last Donation', value: 'Mar 28, 2026' },
-          ].map((stat) => (
-            <div
-              key={stat.label}
-              style={{
-                background: 'var(--white)',
-                padding: '1.5rem',
-                borderRadius: '8px',
-                boxShadow: 'var(--shadow-sm)',
-                borderTop: '4px solid var(--primary)',
-              }}
-            >
-              <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--primary)', marginBottom: '0.25rem' }}>
-                {stat.value}
-              </div>
-              <div style={{ color: 'var(--text-muted)', fontWeight: 600, fontSize: '0.9rem' }}>
-                {stat.label}
-              </div>
-            </div>
-          ))}
         </div>
 
         {/* Make a Donation Form */}

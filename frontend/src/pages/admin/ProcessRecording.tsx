@@ -1,7 +1,30 @@
+import { useEffect, useState } from 'react';
 import AdminLayout from '../../components/AdminLayout';
 import '../../styles/styles.css';
+import apiClient from '../../api/apiClient';
+
+interface ProcessRecording {
+  recordingId: number;
+  residentId: number;
+  sessionDate: string;
+  socialWorker: string;
+  sessionType: string;
+  emotionalStateObserved: string;
+  followUpActions: string;
+}
 
 export default function ProcessRecording() {
+  const [recordings, setRecordings] = useState<ProcessRecording[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    apiClient.get<ProcessRecording[]>('/ProcessRecordings')
+      .then(res => setRecordings(res.data))
+      .catch(() => setError('Failed to load process recordings.'))
+      .finally(() => setLoading(false));
+  }, []);
+
   return (
     <AdminLayout title="Process Recording">
       <div className="page-header">
@@ -15,8 +38,6 @@ export default function ProcessRecording() {
       <div className="filter-bar">
         <select className="filter-select">
           <option>Select Resident...</option>
-          <option>Resident 1</option>
-          <option>Resident 2</option>
         </select>
         <input type="date" className="filter-input" placeholder="From date" />
         <input type="date" className="filter-input" placeholder="To date" />
@@ -28,7 +49,7 @@ export default function ProcessRecording() {
           <thead>
             <tr>
               <th>Date</th>
-              <th>Resident</th>
+              <th>Resident ID</th>
               <th>Social Worker</th>
               <th>Session Type</th>
               <th>Emotional State</th>
@@ -37,11 +58,26 @@ export default function ProcessRecording() {
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <td colSpan={7} className="placeholder-row">
-                Select a resident to view session history.
-              </td>
-            </tr>
+            {loading && (
+              <tr><td colSpan={7} className="placeholder-row">Loading...</td></tr>
+            )}
+            {error && (
+              <tr><td colSpan={7} className="placeholder-row">{error}</td></tr>
+            )}
+            {!loading && !error && recordings.length === 0 && (
+              <tr><td colSpan={7} className="placeholder-row">No session records found.</td></tr>
+            )}
+            {!loading && !error && recordings.map(r => (
+              <tr key={r.recordingId}>
+                <td>{new Date(r.sessionDate).toLocaleDateString()}</td>
+                <td>{r.residentId}</td>
+                <td>{r.socialWorker}</td>
+                <td>{r.sessionType}</td>
+                <td>{r.emotionalStateObserved}</td>
+                <td>{r.followUpActions}</td>
+                <td><button className="btn btn-sm">View</button></td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>

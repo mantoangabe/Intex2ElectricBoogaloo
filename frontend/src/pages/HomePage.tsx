@@ -25,23 +25,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="impact-section">
-        <h2>Our Impact</h2>
-        <div className="stats-grid">
-          {[
-            { number: '500+', label: 'Residents Served' },
-            { number: '12', label: 'Active Safehouses' },
-            { number: '87%', label: 'Reintegration Rate' },
-            { number: '200+', label: 'Partner Organizations' },
-          ].map((stat) => (
-            <div key={stat.label} className="stat-card">
-              <div className="stat-number">{stat.number}</div>
-              <div className="stat-label">{stat.label}</div>
-            </div>
-          ))}
-        </div>
-      </section>
-
       <section className="about-section">
         <h2>About Us</h2>
         <p>
