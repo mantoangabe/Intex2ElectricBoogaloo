@@ -22,7 +22,7 @@ export default function AdminLayout({ title, children }: AdminLayoutProps) {
 
   return (
     <div className="admin-container">
-      <Navbar title={title} showLogout={true} />
+      <Navbar title={title} />
       <div className="admin-layout">
         <aside className="admin-sidebar">
           <nav>

@@ -1,7 +1,9 @@
+import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import '../styles/HomePage.css';
 
 export default function HomePage() {
+  const navigate = useNavigate();
   return (
     <div className="home">
       <Navbar />
