@@ -1,0 +1,5 @@
+{"supporter_id": 36, "as_of_date": "2025-09-01", "lapse_horizon_days": 105, "lapse_probability": 0.8527454223355952, "risk_category": "High", "model_version": "donor_lapse_v1", "recency_days": 443, "frequency": 4}
+{"supporter_id": 18, "as_of_date": "2025-09-01", "lapse_horizon_days": 105, "lapse_probability": 0.8196234842054579, "risk_category": "High", "model_version": "donor_lapse_v1", "recency_days": 327, "frequency": 2}
+{"supporter_id": 39, "as_of_date": "2025-09-01", "lapse_horizon_days": 105, "lapse_probability": 0.7921346146099112, "risk_category": "High", "model_version": "donor_lapse_v1", "recency_days": 78, "frequency": 3}
+{"supporter_id": 58, "as_of_date": "2025-09-01", "lapse_horizon_days": 105, "lapse_probability": 0.7435420251541711, "risk_category": "High", "model_version": "donor_lapse_v1", "recency_days": 593, "frequency": 1}
+{"supporter_id": 43, "as_of_date": "2025-09-01", "lapse_horizon_days": 105, "lapse_probability": 0.7265500305335516, "risk_category": "High", "model_version": "donor_lapse_v1", "recency_days": 232, "frequency": 3}

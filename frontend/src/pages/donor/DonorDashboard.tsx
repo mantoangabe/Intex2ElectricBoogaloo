@@ -1,0 +1,161 @@
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import '../../styles/styles.css';
+
+export default function DonorDashboard() {
+  const navigate = useNavigate();
+  const [donationAmount, setDonationAmount] = useState('');
+  const [donationType, setDonationType] = useState('Monetary');
+  const [programArea, setProgramArea] = useState('General');
+  const [note, setNote] = useState('');
+
+  const handleDonate = (e: React.FormEvent) => {
+    e.preventDefault();
+    // Fake donation handling - just reset form
+    alert(`Thank you for your ${donationAmount ? donationType.toLowerCase() + ' donation!' : 'support!'}`);
+    setDonationAmount('');
+    setDonationType('Monetary');
+    setProgramArea('General');
+    setNote('');
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      <nav className="navbar">
+        <span className="navbar-brand">SafeHaven PH</span>
+        <div className="navbar-links">
+          <a href="/donor">Impact</a>
+          <a href="/">Home</a>
+          <button
+            className="btn btn-primary"
+            onClick={() => navigate('/')}
+            style={{ marginLeft: '1rem', padding: '0.5rem 1.25rem' }}
+          >
+            Logout
+          </button>
+        </div>
+      </nav>
+
+      <main style={{ flex: 1, padding: '2rem', maxWidth: '1000px', margin: '0 auto', width: '100%' }}>
+        <div className="page-header">
+          <div>
+            <h2 style={{ color: 'var(--text)', margin: 0 }}>My Donor Dashboard</h2>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: '0.25rem 0 0' }}>
+              Manage your contributions and view your impact
+            </p>
+          </div>
+        </div>
+
+        {/* Donation Summary */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+          {[
+            { label: 'Total Donated', value: '$2,500' },
+            { label: 'Number of Donations', value: '8' },
+            { label: 'Last Donation', value: 'Mar 28, 2026' },
+          ].map((stat) => (
+            <div
+              key={stat.label}
+              style={{
+                background: 'var(--white)',
+                padding: '1.5rem',
+                borderRadius: '8px',
+                boxShadow: 'var(--shadow-sm)',
+                borderTop: '4px solid var(--primary)',
+              }}
+            >
+              <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--primary)', marginBottom: '0.25rem' }}>
+                {stat.value}
+              </div>
+              <div style={{ color: 'var(--text-muted)', fontWeight: 600, fontSize: '0.9rem' }}>
+                {stat.label}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Make a Donation Form */}
+        <div className="admin-card">
+          <h3>Make a Donation</h3>
+          <form onSubmit={handleDonate}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
+              <div className="form-group">
+                <label>Amount</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="$50.00"
+                  value={donationAmount}
+                  onChange={(e) => setDonationAmount(e.target.value)}
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Donation Type</label>
+                <select value={donationType} onChange={(e) => setDonationType(e.target.value)}>
+                  <option>Monetary</option>
+                  <option>In-Kind</option>
+                  <option>Skills</option>
+                  <option>Time</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>Program Area</label>
+                <select value={programArea} onChange={(e) => setProgramArea(e.target.value)}>
+                  <option>General</option>
+                  <option>Safehouse A</option>
+                  <option>Safehouse B</option>
+                  <option>Education Program</option>
+                  <option>Health Services</option>
+                  <option>Reintegration</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label>Note (Optional)</label>
+              <textarea
+                placeholder="Special instructions or comments..."
+                rows={3}
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                style={{ fontFamily: 'var(--sans)', padding: '0.7rem 0.9rem', border: '1px solid var(--border)', borderRadius: '6px', width: '100%', boxSizing: 'border-box' }}
+              />
+            </div>
+
+            <button type="submit" className="btn btn-primary">
+              Donate Now
+            </button>
+          </form>
+        </div>
+
+        {/* Donation History */}
+        <div className="admin-card">
+          <h3>Donation History</h3>
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Amount</th>
+                <th>Type</th>
+                <th>Program Area</th>
+                <th>Note</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td colSpan={5} className="placeholder-row">
+                  No donations yet. Make your first donation above!
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </main>
+
+      <footer className="footer">
+        <p>&copy; {new Date().getFullYear()} SafeHaven PH. All rights reserved. | <a href="/privacy">Privacy Policy</a></p>
+      </footer>
+    </div>
+  );
+}
