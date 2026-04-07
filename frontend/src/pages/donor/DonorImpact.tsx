@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import '../../styles/styles.css';
 import apiClient from '../../api/apiClient';
@@ -12,7 +11,6 @@ interface Safehouse {
 }
 
 export default function DonorImpact() {
-  const navigate = useNavigate();
   const [safehouses, setSafehouses] = useState<Safehouse[]>([]);
   const [skip, setSkip] = useState(0);
   const [loading, setLoading] = useState(true);
