@@ -31,11 +31,15 @@ interface Resident {
 }
 
 export default function Reports() {
-  const PAGE_SIZE = 5;
+  const DEFAULT_PAGE_SIZE = 5;
   const TOP_SOCIAL_POST_COUNT = 25;
   const [metrics, setMetrics] = useState<SafehouseMonthlyMetric[]>([]);
   const [residents, setResidents] = useState<Resident[]>([]);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [totalCount, setTotalCount] = useState(0);
+  const [jumpPage, setJumpPage] = useState('1');
+  const [metricSortDir, setMetricSortDir] = useState<'asc' | 'desc'>('asc');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
@@ -51,13 +55,13 @@ export default function Reports() {
   const [formData, setFormData] = useState<Partial<SafehouseMonthlyMetric>>({});
   const [saving, setSaving] = useState(false);
 
-  const fetchMetrics = (pageVal: number) => {
+  const fetchMetrics = (pageVal: number, size: number) => {
     setLoading(true);
     apiClient.get<SafehouseMonthlyMetric[]>('/SafehouseMonthlyMetrics', {
-      params: { skip: (pageVal - 1) * PAGE_SIZE, take: PAGE_SIZE },
+      params: { skip: (pageVal - 1) * size, take: size },
     })
       .then(res => {
-        setHasMore(res.data.length === PAGE_SIZE);
+        setHasMore(res.data.length === size);
         setMetrics(res.data);
         setError(null);
       })
@@ -69,7 +73,10 @@ export default function Reports() {
     apiClient.get<Resident[]>('/Residents', { params: { skip: 0, take: 1000 } })
       .then(res => setResidents(res.data))
       .catch(() => {});
-    fetchMetrics(1);
+    fetchMetrics(1, pageSize);
+    apiClient.get<SafehouseMonthlyMetric[]>('/SafehouseMonthlyMetrics', { params: { skip: 0, take: 100000 } })
+      .then(r => setTotalCount(r.data.length))
+      .catch(() => {});
     if (ENABLE_ML_PREDICTIONS) {
       apiClient
         .get<ResidentProgressPrediction[]>('/ResidentProgressPredictions', { params: { take: 1000, latestOnly: true } })
@@ -93,9 +100,10 @@ export default function Reports() {
   const conversionCellStyle = (prob?: number | null) => {
     if (prob == null) return undefined;
     const hue = Math.round(Math.max(0, Math.min(120, prob * 120)));
+    const light = Math.round(96 - prob * 26);
     return {
-      backgroundColor: `hsl(${hue} 75% 92%)`,
-      color: `hsl(${hue} 60% 25%)`,
+      backgroundColor: `hsl(${hue} 85% ${light}%)`,
+      color: `hsl(${hue} 70% 18%)`,
       fontWeight: 700 as const,
       borderRadius: '6px',
       padding: '0.2rem 0.45rem',
@@ -123,7 +131,7 @@ export default function Reports() {
       } else {
         await apiClient.post('/SafehouseMonthlyMetrics', formData);
       }
-      fetchMetrics(0);
+      fetchMetrics(1, pageSize);
       closeModal();
     } catch (err) {
       alert('Failed to save metric.');
@@ -136,7 +144,7 @@ export default function Reports() {
     if (window.confirm('Delete this metric?')) {
       try {
         await apiClient.delete(`/SafehouseMonthlyMetrics/${id}`);
-        fetchMetrics(0);
+        fetchMetrics(page, pageSize);
       } catch (err) {
         alert('Failed to delete metric.');
       }
@@ -159,6 +167,9 @@ export default function Reports() {
   const topSocialAvg = socialPredictions.length
     ? socialPredictions.reduce((sum, p) => sum + p.predictedDonationValuePhp, 0) / socialPredictions.length
     : 0;
+  const sortedMetrics = [...metrics].sort((a, b) =>
+    metricSortDir === 'asc' ? a.safehouseId - b.safehouseId : b.safehouseId - a.safehouseId
+  );
 
   return (
     <AdminLayout title="Reports & Analytics">
@@ -184,7 +195,7 @@ export default function Reports() {
           <thead>
             <tr>
               <th>Month</th>
-              <th>Safehouse ID</th>
+              <th className="clickable-th" onClick={() => setMetricSortDir(prev => prev === 'asc' ? 'desc' : 'asc')}>Safehouse ID</th>
               <th>Active Residents</th>
               <th>Avg Education Progress</th>
               <th>Avg Health Score</th>
@@ -198,7 +209,7 @@ export default function Reports() {
             {metrics.length === 0 && !error && (
               <tr><td colSpan={5} className="placeholder-row">No metrics recorded yet.</td></tr>
             )}
-            {metrics.map(m => (
+            {sortedMetrics.map(m => (
               <tr key={m.metricId}>
                 <td>{new Date(m.monthStart).toLocaleDateString('en-US', { year: 'numeric', month: 'short' })}</td>
                 <td>{m.safehouseId}</td>
@@ -215,11 +226,28 @@ export default function Reports() {
         </table>
         <div className="pagination-row">
           <button className="btn btn-secondary btn-sm" disabled={page === 1 || loading} onClick={() => {
-            const p = page - 1; setPage(p); fetchMetrics(p);
+            const p = page - 1; setPage(p); fetchMetrics(p, pageSize);
           }}>Previous</button>
-          <span>Page {page}</span>
+          <span>Page {page} of {Math.max(1, Math.ceil(totalCount / pageSize))}</span>
+          <input className="pagination-jump-input" type="number" min={1} max={Math.max(1, Math.ceil(totalCount / pageSize))} value={jumpPage} onChange={(e) => setJumpPage(e.target.value)} />
+          <button className="btn btn-secondary btn-sm" onClick={() => {
+            const max = Math.max(1, Math.ceil(totalCount / pageSize));
+            const p = Math.min(max, Math.max(1, Number(jumpPage) || 1));
+            setPage(p);
+            fetchMetrics(p, pageSize);
+          }}>Go</button>
+          <select className="filter-select" value={pageSize} onChange={(e) => {
+            const size = Number(e.target.value);
+            setPageSize(size);
+            setPage(1);
+            fetchMetrics(1, size);
+          }}>
+            <option value={5}>5 / page</option>
+            <option value={10}>10 / page</option>
+            <option value={25}>25 / page</option>
+          </select>
           <button className="btn btn-secondary btn-sm" disabled={!hasMore || loading} onClick={() => {
-            const p = page + 1; setPage(p); fetchMetrics(p);
+            const p = page + 1; setPage(p); fetchMetrics(p, pageSize);
           }}>Next</button>
         </div>
       </div>
@@ -248,6 +276,9 @@ export default function Reports() {
             </tr>
           </tbody>
         </table>
+        <p style={{ marginTop: '0.75rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+          Context: Avg Education Progress and Avg Health Score are internal 0-100 normalized indicators (higher is better).
+        </p>
       </div>
 
       {ENABLE_ML_PREDICTIONS && (
@@ -276,7 +307,7 @@ export default function Reports() {
                 </tr>
               </tbody>
             </table>
-            <div style={{ display: 'flex', gap: '1rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: '0.35rem', marginTop: '0.75rem', flexDirection: 'column' }}>
               <LastRefreshChip meta={progressMeta} label="Progress" />
               <LastRefreshChip meta={incidentMeta} label="Incident" />
               <LastRefreshChip meta={socialMeta} label="Social donation" />

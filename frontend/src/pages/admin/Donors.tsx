@@ -32,12 +32,20 @@ interface Donation {
 }
 
 export default function Donors() {
-  const PAGE_SIZE = 25;
+  const DEFAULT_PAGE_SIZE = 25;
   const [supporters, setSupporters] = useState<Supporter[]>([]);
   const [donations, setDonations] = useState<Donation[]>([]);
   const [predictions, setPredictions] = useState<Record<number, DonorRetentionPrediction>>({});
+  const [reachOutFilter, setReachOutFilter] = useState<'all' | 'yes' | 'no'>('all');
+  const [supporterSort, setSupporterSort] = useState<{ key: string; dir: 'asc' | 'desc' }>({ key: 'displayName', dir: 'asc' });
   const [supporterPage, setSupporterPage] = useState(1);
+  const [supporterPageSize, setSupporterPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [supporterTotalCount, setSupporterTotalCount] = useState(0);
+  const [supporterJumpPage, setSupporterJumpPage] = useState('1');
   const [donationPage, setDonationPage] = useState(1);
+  const [donationPageSize, setDonationPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [donationTotalCount, setDonationTotalCount] = useState(0);
+  const [donationJumpPage, setDonationJumpPage] = useState('1');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [supporterHasMore, setSupporterHasMore] = useState(false);
@@ -57,11 +65,11 @@ export default function Donors() {
   const [donationFormData, setDonationFormData] = useState<Partial<Donation>>({});
   const [savingDonation, setSavingDonation] = useState(false);
 
-  const fetchSupporters = (page: number) => {
+  const fetchSupporters = (page: number, pageSize: number) => {
     setLoading(true);
-    apiClient.get<Supporter[]>('/Supporters', { params: { skip: (page - 1) * PAGE_SIZE, take: PAGE_SIZE } })
+    apiClient.get<Supporter[]>('/Supporters', { params: { skip: (page - 1) * pageSize, take: pageSize } })
       .then(res => {
-        setSupporterHasMore(res.data.length === PAGE_SIZE);
+        setSupporterHasMore(res.data.length === pageSize);
         setSupporters(res.data);
         setError(null);
       })
@@ -69,11 +77,11 @@ export default function Donors() {
       .finally(() => setLoading(false));
   };
 
-  const fetchDonations = (page: number) => {
+  const fetchDonations = (page: number, pageSize: number) => {
     setLoading(true);
-    apiClient.get<Donation[]>('/Donations', { params: { skip: (page - 1) * PAGE_SIZE, take: PAGE_SIZE } })
+    apiClient.get<Donation[]>('/Donations', { params: { skip: (page - 1) * pageSize, take: pageSize } })
       .then(res => {
-        setDonationHasMore(res.data.length === PAGE_SIZE);
+        setDonationHasMore(res.data.length === pageSize);
         setDonations(res.data);
         setError(null);
       })
@@ -82,8 +90,10 @@ export default function Donors() {
   };
 
   useEffect(() => {
-    fetchSupporters(1);
-    fetchDonations(1);
+    fetchSupporters(1, supporterPageSize);
+    fetchDonations(1, donationPageSize);
+    apiClient.get<Supporter[]>('/Supporters', { params: { skip: 0, take: 100000 } }).then(r => setSupporterTotalCount(r.data.length)).catch(() => {});
+    apiClient.get<Donation[]>('/Donations', { params: { skip: 0, take: 100000 } }).then(r => setDonationTotalCount(r.data.length)).catch(() => {});
     if (ENABLE_ML_PREDICTIONS) {
       apiClient
         .get<DonorRetentionPrediction[]>('/DonorRetentionPredictions', {
@@ -123,7 +133,7 @@ export default function Donors() {
       } else {
         await apiClient.post('/Supporters', supporterFormData);
       }
-      fetchSupporters(0);
+      fetchSupporters(1, supporterPageSize);
       closeSupporterModal();
     } catch (err) {
       alert('Failed to save supporter.');
@@ -136,7 +146,7 @@ export default function Donors() {
     if (window.confirm('Delete this supporter?')) {
       try {
         await apiClient.delete(`/Supporters/${id}`);
-        fetchSupporters(0);
+        fetchSupporters(supporterPage, supporterPageSize);
       } catch (err) {
         alert('Failed to delete supporter.');
       }
@@ -163,7 +173,7 @@ export default function Donors() {
       } else {
         await apiClient.post('/Donations', donationFormData);
       }
-      fetchDonations(0);
+      fetchDonations(1, donationPageSize);
       closeDonationModal();
     } catch (err) {
       alert('Failed to save donation.');
@@ -176,7 +186,7 @@ export default function Donors() {
     if (window.confirm('Delete this donation?')) {
       try {
         await apiClient.delete(`/Donations/${id}`);
-        fetchDonations(0);
+        fetchDonations(donationPage, donationPageSize);
       } catch (err) {
         alert('Failed to delete donation.');
       }
@@ -188,6 +198,28 @@ export default function Donors() {
     acc[d.supporterId] = (acc[d.supporterId] ?? 0) + val;
     return acc;
   }, {});
+  const supporterTotalPages = Math.max(1, Math.ceil(supporterTotalCount / supporterPageSize));
+  const donationTotalPages = Math.max(1, Math.ceil(donationTotalCount / donationPageSize));
+  const donorRows = supporters
+    .filter(s => {
+      if (!ENABLE_ML_PREDICTIONS || reachOutFilter === 'all') return true;
+      const p = predictions[s.supporterId]?.lapseRiskProbability;
+      if (p == null) return false;
+      return reachOutFilter === 'yes' ? p >= 0.5 : p < 0.5;
+    })
+    .sort((a, b) => {
+      const dir = supporterSort.dir === 'asc' ? 1 : -1;
+      if (supporterSort.key === 'lapseRiskProbability') {
+        const av = predictions[a.supporterId]?.lapseRiskProbability ?? -1;
+        const bv = predictions[b.supporterId]?.lapseRiskProbability ?? -1;
+        return (av - bv) * dir;
+      }
+      const av = String((a as any)[supporterSort.key] ?? '');
+      const bv = String((b as any)[supporterSort.key] ?? '');
+      return av.localeCompare(bv) * dir;
+    });
+  const toggleSupporterSort = (key: string) =>
+    setSupporterSort(prev => ({ key, dir: prev.key === key && prev.dir === 'asc' ? 'desc' : 'asc' }));
 
   return (
     <AdminLayout title="Donors & Contributions">
@@ -212,6 +244,13 @@ export default function Donors() {
           <option>Active</option>
           <option>Inactive</option>
         </select>
+        {ENABLE_ML_PREDICTIONS && (
+          <select className="filter-select" value={reachOutFilter} onChange={(e) => setReachOutFilter(e.target.value as any)}>
+            <option value="all">Reach Out: All</option>
+            <option value="yes">Reach Out: Yes</option>
+            <option value="no">Reach Out: No</option>
+          </select>
+        )}
       </div>
 
       <div className="toggle-group">
@@ -234,13 +273,13 @@ export default function Donors() {
         <table className="admin-table">
           <thead>
             <tr>
-              <th>Name</th>
-              <th>Type</th>
-              <th>Status</th>
-              {ENABLE_ML_PREDICTIONS && <th>Lapse Risk</th>}
-              {ENABLE_ML_PREDICTIONS && <th>Lapse Probability</th>}
-              {ENABLE_ML_PREDICTIONS && <th>Reach Out</th>}
-              <th>Total Contributed</th>
+              <th className="clickable-th" onClick={() => toggleSupporterSort('displayName')}>Name</th>
+              <th className="clickable-th" onClick={() => toggleSupporterSort('supporterType')}>Type</th>
+              <th className="clickable-th" onClick={() => toggleSupporterSort('status')}>Status</th>
+              {ENABLE_ML_PREDICTIONS && <th className="table-center clickable-th" onClick={() => toggleSupporterSort('lapseRiskProbability')}>Lapse Risk</th>}
+              {ENABLE_ML_PREDICTIONS && <th className="clickable-th" onClick={() => toggleSupporterSort('lapseRiskProbability')}>Lapse Probability</th>}
+              {ENABLE_ML_PREDICTIONS && <th className="clickable-th" onClick={() => toggleSupporterSort('lapseRiskProbability')}>Reach Out</th>}
+              <th className="clickable-th" onClick={() => toggleSupporterSort('displayName')}>Total Contributed</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -248,16 +287,16 @@ export default function Donors() {
             {error && (
               <tr><td colSpan={ENABLE_ML_PREDICTIONS ? 8 : 5} className="placeholder-row">{error}</td></tr>
             )}
-            {supporters.length === 0 && !error && (
+            {donorRows.length === 0 && !error && (
               <tr><td colSpan={ENABLE_ML_PREDICTIONS ? 8 : 5} className="placeholder-row">No donors found.</td></tr>
             )}
-            {supporters.map(s => (
+            {donorRows.map(s => (
               <tr key={s.supporterId}>
                 <td>{s.displayName}</td>
                 <td>{s.supporterType}</td>
                 <td>{s.status}</td>
                 {ENABLE_ML_PREDICTIONS && (
-                  <td>{predictions[s.supporterId] ? <PredictionBadge probability={predictions[s.supporterId].lapseRiskProbability} /> : '—'}</td>
+                  <td className="table-center">{predictions[s.supporterId] ? <PredictionBadge probability={predictions[s.supporterId].lapseRiskProbability} /> : '—'}</td>
                 )}
                 {ENABLE_ML_PREDICTIONS && (
                   <td>{predictions[s.supporterId] ? `${(predictions[s.supporterId].lapseRiskProbability * 100).toFixed(1)}%` : '—'}</td>
@@ -276,11 +315,34 @@ export default function Donors() {
         </table>
         <div className="pagination-row">
           <button className="btn btn-secondary btn-sm" disabled={supporterPage === 1 || loading} onClick={() => {
-            const p = supporterPage - 1; setSupporterPage(p); fetchSupporters(p);
+            const p = supporterPage - 1; setSupporterPage(p); fetchSupporters(p, supporterPageSize);
           }}>Previous</button>
-          <span>Page {supporterPage}</span>
+          <span>Page {supporterPage} of {supporterTotalPages}</span>
+          <input
+            className="pagination-jump-input"
+            type="number"
+            min={1}
+            max={supporterTotalPages}
+            value={supporterJumpPage}
+            onChange={(e) => setSupporterJumpPage(e.target.value)}
+          />
+          <button className="btn btn-secondary btn-sm" onClick={() => {
+            const p = Math.min(supporterTotalPages, Math.max(1, Number(supporterJumpPage) || 1));
+            setSupporterPage(p);
+            fetchSupporters(p, supporterPageSize);
+          }}>Go</button>
+          <select className="filter-select" value={supporterPageSize} onChange={(e) => {
+            const size = Number(e.target.value);
+            setSupporterPageSize(size);
+            setSupporterPage(1);
+            fetchSupporters(1, size);
+          }}>
+            <option value={10}>10 / page</option>
+            <option value={25}>25 / page</option>
+            <option value={50}>50 / page</option>
+          </select>
           <button className="btn btn-secondary btn-sm" disabled={!supporterHasMore || loading} onClick={() => {
-            const p = supporterPage + 1; setSupporterPage(p); fetchSupporters(p);
+            const p = supporterPage + 1; setSupporterPage(p); fetchSupporters(p, supporterPageSize);
           }}>Next</button>
         </div>
         {ENABLE_ML_PREDICTIONS && (
@@ -327,11 +389,27 @@ export default function Donors() {
         </table>
         <div className="pagination-row">
           <button className="btn btn-secondary btn-sm" disabled={donationPage === 1 || loading} onClick={() => {
-            const p = donationPage - 1; setDonationPage(p); fetchDonations(p);
+            const p = donationPage - 1; setDonationPage(p); fetchDonations(p, donationPageSize);
           }}>Previous</button>
-          <span>Page {donationPage}</span>
+          <span>Page {donationPage} of {donationTotalPages}</span>
+          <input className="pagination-jump-input" type="number" min={1} max={donationTotalPages} value={donationJumpPage} onChange={(e) => setDonationJumpPage(e.target.value)} />
+          <button className="btn btn-secondary btn-sm" onClick={() => {
+            const p = Math.min(donationTotalPages, Math.max(1, Number(donationJumpPage) || 1));
+            setDonationPage(p);
+            fetchDonations(p, donationPageSize);
+          }}>Go</button>
+          <select className="filter-select" value={donationPageSize} onChange={(e) => {
+            const size = Number(e.target.value);
+            setDonationPageSize(size);
+            setDonationPage(1);
+            fetchDonations(1, size);
+          }}>
+            <option value={10}>10 / page</option>
+            <option value={25}>25 / page</option>
+            <option value={50}>50 / page</option>
+          </select>
           <button className="btn btn-secondary btn-sm" disabled={!donationHasMore || loading} onClick={() => {
-            const p = donationPage + 1; setDonationPage(p); fetchDonations(p);
+            const p = donationPage + 1; setDonationPage(p); fetchDonations(p, donationPageSize);
           }}>Next</button>
         </div>
       </div>}
