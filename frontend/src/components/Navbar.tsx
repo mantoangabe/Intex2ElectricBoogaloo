@@ -54,7 +54,7 @@ export default function Navbar({ title }: NavbarProps) {
     <nav className="navbar">
       <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
         <span className="navbar-brand" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
-          SafeHaven PH
+          River of Life
         </span>
       </div>
 

@@ -95,7 +95,7 @@ export default function ImpactDashboard() {
       </main>
 
       <footer className="footer">
-        <p>&copy; {new Date().getFullYear()} SafeHaven PH. All rights reserved. | <a href="/privacy">Privacy Policy</a></p>
+        <p>&copy; {new Date().getFullYear()} River of Life. All rights reserved. | <a href="/privacy">Privacy Policy</a></p>
       </footer>
     </div>
   );

@@ -51,7 +51,7 @@ export default function LoginPage() {
     <div className="login-container">
       <div className="login-card">
         <div className="login-header">
-          <h1>SafeHaven Admin</h1>
+          <h1>River of Life Admin</h1>
           <p>Staff & Administrator Portal</p>
         </div>
 

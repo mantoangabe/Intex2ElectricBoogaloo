@@ -96,7 +96,7 @@ export default function DonorImpact() {
 
       <footer className="footer">
         <p>
-          &copy; {new Date().getFullYear()} SafeHaven PH. All rights reserved. | <a href="/privacy">Privacy Policy</a> |{' '}
+          &copy; {new Date().getFullYear()} River of Life. All rights reserved. | <a href="/privacy">Privacy Policy</a> |{' '}
           <a href="/cookies">Cookie Policy</a>
         </p>
       </footer>
