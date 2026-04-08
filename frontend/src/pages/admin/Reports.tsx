@@ -31,9 +31,11 @@ interface Resident {
 }
 
 export default function Reports() {
+  const PAGE_SIZE = 5;
+  const TOP_SOCIAL_POST_COUNT = 25;
   const [metrics, setMetrics] = useState<SafehouseMonthlyMetric[]>([]);
   const [residents, setResidents] = useState<Resident[]>([]);
-  const [skip, setSkip] = useState(0);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
@@ -49,16 +51,14 @@ export default function Reports() {
   const [formData, setFormData] = useState<Partial<SafehouseMonthlyMetric>>({});
   const [saving, setSaving] = useState(false);
 
-  const fetchMetrics = (skipVal: number) => {
+  const fetchMetrics = (pageVal: number) => {
     setLoading(true);
-    apiClient.get<SafehouseMonthlyMetric[]>('/SafehouseMonthlyMetrics', { params: { skip: skipVal, take: 25 } })
+    apiClient.get<SafehouseMonthlyMetric[]>('/SafehouseMonthlyMetrics', {
+      params: { skip: (pageVal - 1) * PAGE_SIZE, take: PAGE_SIZE },
+    })
       .then(res => {
-        setHasMore(res.data.length === 25);
-        if (skipVal === 0) {
-          setMetrics(res.data);
-        } else {
-          setMetrics(prev => [...prev, ...res.data]);
-        }
+        setHasMore(res.data.length === PAGE_SIZE);
+        setMetrics(res.data);
         setError(null);
       })
       .catch(() => setError('Failed to load metrics.'))
@@ -69,7 +69,7 @@ export default function Reports() {
     apiClient.get<Resident[]>('/Residents', { params: { skip: 0, take: 1000 } })
       .then(res => setResidents(res.data))
       .catch(() => {});
-    fetchMetrics(0);
+    fetchMetrics(1);
     if (ENABLE_ML_PREDICTIONS) {
       apiClient
         .get<ResidentProgressPrediction[]>('/ResidentProgressPredictions', { params: { take: 1000, latestOnly: true } })
@@ -81,17 +81,26 @@ export default function Reports() {
         .catch(() => setIncidentPredictions([]));
       apiClient
         .get<SocialDonationPrediction[]>('/SocialDonationPredictions', {
-          params: { take: 25, latestOnly: true, sort: 'value_desc' },
+          params: { take: TOP_SOCIAL_POST_COUNT, latestOnly: true, sort: 'value_desc' },
         })
         .then(res => setSocialPredictions(res.data))
         .catch(() => setSocialPredictions([]));
     }
   }, []);
 
-  const handleShowMore = () => {
-    const newSkip = skip + 25;
-    setSkip(newSkip);
-    fetchMetrics(newSkip);
+  const fmtUsd = (value: number) =>
+    `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const conversionCellStyle = (prob?: number | null) => {
+    if (prob == null) return undefined;
+    const hue = Math.round(Math.max(0, Math.min(120, prob * 120)));
+    return {
+      backgroundColor: `hsl(${hue} 75% 92%)`,
+      color: `hsl(${hue} 60% 25%)`,
+      fontWeight: 700 as const,
+      borderRadius: '6px',
+      padding: '0.2rem 0.45rem',
+      display: 'inline-block',
+    };
   };
 
   const openModal = (metric: SafehouseMonthlyMetric | null) => {
@@ -148,8 +157,8 @@ export default function Reports() {
   const highProgressRisk = progressPredictions.filter(p => p.lowProgressRiskProbability >= 0.66).length;
   const highIncidentRisk = incidentPredictions.filter(p => p.incidentRiskProbability >= 0.66).length;
   const topSocialAvg = socialPredictions.length
-    ? (socialPredictions.reduce((sum, p) => sum + p.predictedDonationValuePhp, 0) / socialPredictions.length).toFixed(2)
-    : '0.00';
+    ? socialPredictions.reduce((sum, p) => sum + p.predictedDonationValuePhp, 0) / socialPredictions.length
+    : 0;
 
   return (
     <AdminLayout title="Reports & Analytics">
@@ -204,13 +213,15 @@ export default function Reports() {
             ))}
           </tbody>
         </table>
-        {hasMore && (
-          <div style={{ textAlign: 'center', marginTop: '1rem' }}>
-            <button className="btn btn-secondary" onClick={handleShowMore} disabled={loading}>
-              {loading ? 'Loading...' : 'Show More'}
-            </button>
-          </div>
-        )}
+        <div className="pagination-row">
+          <button className="btn btn-secondary btn-sm" disabled={page === 1 || loading} onClick={() => {
+            const p = page - 1; setPage(p); fetchMetrics(p);
+          }}>Previous</button>
+          <span>Page {page}</span>
+          <button className="btn btn-secondary btn-sm" disabled={!hasMore || loading} onClick={() => {
+            const p = page + 1; setPage(p); fetchMetrics(p);
+          }}>Next</button>
+        </div>
       </div>
 
       <div className="admin-card">
@@ -243,11 +254,6 @@ export default function Reports() {
         <>
           <div className="admin-card">
             <h3>Executive Prediction Snapshot</h3>
-            <div style={{ display: 'flex', gap: '1rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
-              <LastRefreshChip meta={progressMeta} label="Progress" />
-              <LastRefreshChip meta={incidentMeta} label="Incident" />
-              <LastRefreshChip meta={socialMeta} label="Social donation" />
-            </div>
             <table className="admin-table">
               <thead>
                 <tr>
@@ -257,7 +263,7 @@ export default function Reports() {
               </thead>
               <tbody>
                 <tr>
-                  <td>Residents in High low-progress risk band</td>
+                  <td>Residents in High &quot;Low Progress&quot; risk band</td>
                   <td>{highProgressRisk}</td>
                 </tr>
                 <tr>
@@ -265,11 +271,16 @@ export default function Reports() {
                   <td>{highIncidentRisk}</td>
                 </tr>
                 <tr>
-                  <td>Top social posts avg predicted donation value (PHP)</td>
-                  <td>{topSocialAvg}</td>
+                  <td>Avg predicted donation value across top social posts (n={socialPredictions.length}, USD)</td>
+                  <td>{fmtUsd(topSocialAvg)}</td>
                 </tr>
               </tbody>
             </table>
+            <div style={{ display: 'flex', gap: '1rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
+              <LastRefreshChip meta={progressMeta} label="Progress" />
+              <LastRefreshChip meta={incidentMeta} label="Incident" />
+              <LastRefreshChip meta={socialMeta} label="Social donation" />
+            </div>
           </div>
 
           <div className="admin-card">
@@ -278,7 +289,7 @@ export default function Reports() {
               <thead>
                 <tr>
                   <th>Post ID</th>
-                  <th>Predicted Donation Value (PHP)</th>
+                  <th>Predicted Donation Value (USD)</th>
                   <th>High Conversion Probability</th>
                 </tr>
               </thead>
@@ -286,8 +297,12 @@ export default function Reports() {
                 {socialPredictions.slice(0, 10).map(post => (
                   <tr key={post.predictionId}>
                     <td>{post.postId}</td>
-                    <td>{post.predictedDonationValuePhp.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
-                    <td>{post.pHighConversion != null ? `${(post.pHighConversion * 100).toFixed(1)}%` : '—'}</td>
+                    <td>{fmtUsd(post.predictedDonationValuePhp)}</td>
+                    <td>
+                      {post.pHighConversion != null
+                        ? <span style={conversionCellStyle(post.pHighConversion)}>{`${(post.pHighConversion * 100).toFixed(1)}%`}</span>
+                        : '—'}
+                    </td>
                   </tr>
                 ))}
                 {socialPredictions.length === 0 && (

@@ -13,6 +13,7 @@ import type {
 } from '../types/predictions';
 
 export default function AdminDashboard() {
+  const SOCIAL_TOP_COUNT = 50;
   const [residentCount, setResidentCount] = useState<number | null>(null);
   const [supporterCount, setSupporterCount] = useState<number | null>(null);
   const [donationTotal, setDonationTotal] = useState<number | null>(null);
@@ -45,7 +46,7 @@ export default function AdminDashboard() {
       apiClient.get<IncidentRiskPrediction[]>('/IncidentRiskPredictions', { params: { take: 2000, latestOnly: true } })
         .then(r => setHighIncidentRiskCount(r.data.filter(x => x.incidentRiskProbability >= 0.66).length))
         .catch(() => setHighIncidentRiskCount(null));
-      apiClient.get<SocialDonationPrediction[]>('/SocialDonationPredictions', { params: { take: 50, latestOnly: true, sort: 'value_desc' } })
+      apiClient.get<SocialDonationPrediction[]>('/SocialDonationPredictions', { params: { take: SOCIAL_TOP_COUNT, latestOnly: true, sort: 'value_desc' } })
         .then(r => {
           if (!r.data.length) {
             setTopSocialAvgValue(0);
@@ -88,23 +89,23 @@ export default function AdminDashboard() {
           <>
             <div className="metric-card">
               <div className="metric-value">{fmt(highLapseCount)}</div>
-              <div className="metric-label">High Donor Lapse Risk</div>
+              <div className="metric-label">Donors at High Lapse Risk (105-day)</div>
             </div>
             <div className="metric-card">
               <div className="metric-value">{fmt(highResidentRiskCount)}</div>
-              <div className="metric-label">High Low-Progress Risk</div>
+              <div className="metric-label">Residents at High &quot;Low Progress&quot; Risk (next review period)</div>
             </div>
             <div className="metric-card">
               <div className="metric-value">{fmt(highIncidentRiskCount)}</div>
-              <div className="metric-label">High Incident Risk</div>
+              <div className="metric-label">Residents at High Incident Risk (60-day)</div>
             </div>
             <div className="metric-card">
               <div className="metric-value">
                 {topSocialAvgValue === null
                   ? '...'
-                  : `₱${topSocialAvgValue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
+                  : `$${topSocialAvgValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
               </div>
-              <div className="metric-label">Avg Predicted Social Donation Value</div>
+              <div className="metric-label">Avg Predicted Donation Value (Top {SOCIAL_TOP_COUNT} Social Posts, USD)</div>
             </div>
           </>
         )}

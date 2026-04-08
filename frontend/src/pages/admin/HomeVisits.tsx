@@ -21,8 +21,9 @@ interface HomeVisitation {
 }
 
 export default function HomeVisits() {
+  const PAGE_SIZE = 25;
   const [visits, setVisits] = useState<HomeVisitation[]>([]);
-  const [skip, setSkip] = useState(0);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
@@ -32,16 +33,12 @@ export default function HomeVisits() {
   const [formData, setFormData] = useState<Partial<HomeVisitation>>({});
   const [saving, setSaving] = useState(false);
 
-  const fetchVisits = (skipVal: number) => {
+  const fetchVisits = (pageVal: number) => {
     setLoading(true);
-    apiClient.get<HomeVisitation[]>('/HomeVisitations', { params: { skip: skipVal, take: 25 } })
+    apiClient.get<HomeVisitation[]>('/HomeVisitations', { params: { skip: (pageVal - 1) * PAGE_SIZE, take: PAGE_SIZE } })
       .then(res => {
-        setHasMore(res.data.length === 25);
-        if (skipVal === 0) {
-          setVisits(res.data);
-        } else {
-          setVisits(prev => [...prev, ...res.data]);
-        }
+        setHasMore(res.data.length === PAGE_SIZE);
+        setVisits(res.data);
         setError(null);
       })
       .catch(() => setError('Failed to load home visitations.'))
@@ -49,14 +46,8 @@ export default function HomeVisits() {
   };
 
   useEffect(() => {
-    fetchVisits(0);
+    fetchVisits(1);
   }, []);
-
-  const handleShowMore = () => {
-    const newSkip = skip + 25;
-    setSkip(newSkip);
-    fetchVisits(newSkip);
-  };
 
   const openModal = (visit: HomeVisitation | null) => {
     setEditVisit(visit);
@@ -159,13 +150,15 @@ export default function HomeVisits() {
             ))}
           </tbody>
         </table>
-        {hasMore && (
-          <div style={{ textAlign: 'center', marginTop: '1rem' }}>
-            <button className="btn btn-secondary" onClick={handleShowMore} disabled={loading}>
-              {loading ? 'Loading...' : 'Show More'}
-            </button>
-          </div>
-        )}
+        <div className="pagination-row">
+          <button className="btn btn-secondary btn-sm" disabled={page === 1 || loading} onClick={() => {
+            const p = page - 1; setPage(p); fetchVisits(p);
+          }}>Previous</button>
+          <span>Page {page}</span>
+          <button className="btn btn-secondary btn-sm" disabled={!hasMore || loading} onClick={() => {
+            const p = page + 1; setPage(p); fetchVisits(p);
+          }}>Next</button>
+        </div>
       </div>
 
       <div className="admin-card">
