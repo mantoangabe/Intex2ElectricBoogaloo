@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import apiClient from '../api/apiClient';
 import '../styles/LoginPage.css';
 
@@ -22,13 +23,22 @@ export default function LoginPage() {
     try {
       setIsSubmitting(true);
       await apiClient.post('/Auth/login', {
-        email,
+        email: email.trim(),
         password,
       });
 
       navigate('/admin/dashboard');
-    } catch {
-      setError('Login failed. Check your credentials and try again.');
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        const status = err.response?.status;
+        if (status === 401) {
+          setError('Login failed. Invalid email or password.');
+        } else {
+          setError(`Login request failed (${status ?? 'network error'}).`);
+        }
+      } else {
+        setError('Login failed. Check your credentials and try again.');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -42,11 +52,11 @@ export default function LoginPage() {
           <p>Staff & Administrator Portal</p>
         </div>
 
-        <form onSubmit={handleLogin}>
+        <form onSubmit={handleLogin} noValidate>
           <div className="form-group">
             <label>Email</label>
             <input
-              type="email"
+              type="text"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Enter your email"
