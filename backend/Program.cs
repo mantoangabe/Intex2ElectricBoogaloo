@@ -1,5 +1,6 @@
 using backend.Data;
 using backend.Models;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -34,6 +35,15 @@ builder.Services
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+
+    // Trust reverse proxy headers in server environments where proxy IP may vary.
+    options.KnownIPNetworks.Clear();
+    options.KnownProxies.Clear();
+});
 
 builder.Services.AddCors(options =>
 {
@@ -70,6 +80,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("ProdCors");
+app.UseForwardedHeaders();
 
 app.UseHttpsRedirection();
 
