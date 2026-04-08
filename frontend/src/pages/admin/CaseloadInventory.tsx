@@ -35,6 +35,8 @@ export default function CaseloadInventory() {
   const [totalCount, setTotalCount] = useState(0);
   const [jumpPage, setJumpPage] = useState('1');
   const [sortConfig, setSortConfig] = useState<{ key: string; dir: 'asc' | 'desc' }>({ key: 'residentId', dir: 'asc' });
+  const [progressStageFilter, setProgressStageFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all');
+  const [incidentStageFilter, setIncidentStageFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all');
   const filteredResidents = residents.filter(r => {
     const p = progressPredictions[r.residentId]?.lowProgressRiskProbability;
     const i = incidentPredictions[r.residentId]?.incidentRiskProbability;
@@ -57,8 +59,6 @@ export default function CaseloadInventory() {
     return String((a as any)[sortConfig.key] ?? '').localeCompare(String((b as any)[sortConfig.key] ?? '')) * dir;
   });
   const toggleSort = (key: string) => setSortConfig(prev => ({ key, dir: prev.key === key && prev.dir === 'asc' ? 'desc' : 'asc' }));
-  const [progressStageFilter, setProgressStageFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all');
-  const [incidentStageFilter, setIncidentStageFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
@@ -206,14 +206,14 @@ export default function CaseloadInventory() {
         <table className="admin-table">
           <thead>
             <tr>
-              <th className="clickable-th" onClick={() => toggleSort('residentId')}>ID</th>
-              <th className="clickable-th" onClick={() => toggleSort('caseControlNo')}>Case Control No.</th>
+              <th className="clickable-th" onClick={() => toggleSort('residentId')}>ID {sortConfig.key === 'residentId' ? (sortConfig.dir === 'asc' ? '▲' : '▼') : '↕'}</th>
+              <th className="clickable-th" onClick={() => toggleSort('caseControlNo')}>Case Control No. {sortConfig.key === 'caseControlNo' ? (sortConfig.dir === 'asc' ? '▲' : '▼') : '↕'}</th>
               <th>Age</th>
               <th>Case Category</th>
               <th>Safehouse</th>
               <th>Status</th>
-              {ENABLE_ML_PREDICTIONS && <th className="table-center clickable-th" onClick={() => toggleSort('lowProgressRiskProbability')}>Low Progress Risk</th>}
-              {ENABLE_ML_PREDICTIONS && <th className="table-center clickable-th" onClick={() => toggleSort('incidentRiskProbability')}>Incident Risk</th>}
+              {ENABLE_ML_PREDICTIONS && <th className="table-center clickable-th" onClick={() => toggleSort('lowProgressRiskProbability')}>Low Progress Risk {sortConfig.key === 'lowProgressRiskProbability' ? (sortConfig.dir === 'asc' ? '▲' : '▼') : '↕'}</th>}
+              {ENABLE_ML_PREDICTIONS && <th className="table-center clickable-th" onClick={() => toggleSort('incidentRiskProbability')}>Incident Risk {sortConfig.key === 'incidentRiskProbability' ? (sortConfig.dir === 'asc' ? '▲' : '▼') : '↕'}</th>}
               <th>Assigned Social Worker</th>
               <th>Actions</th>
             </tr>
@@ -268,7 +268,7 @@ export default function CaseloadInventory() {
             setPage(p);
             fetchResidents(p, pageSize);
           }}>Go</button>
-          <select className="filter-select" value={pageSize} onChange={(e) => {
+          <select className="filter-select" style={{ marginLeft: 'auto' }} value={pageSize} onChange={(e) => {
             const size = Number(e.target.value);
             setPageSize(size);
             setPage(1);

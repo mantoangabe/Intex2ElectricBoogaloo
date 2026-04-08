@@ -129,10 +129,10 @@ export default function HomeVisits() {
         <table className="admin-table">
           <thead>
             <tr>
-              <th className="clickable-th" onClick={() => toggleSort('visitDate')}>Date</th>
-              <th className="clickable-th" onClick={() => toggleSort('residentId')}>Resident ID</th>
-              <th className="clickable-th" onClick={() => toggleSort('visitType')}>Visit Type</th>
-              <th className="clickable-th" onClick={() => toggleSort('socialWorker')}>Social Worker</th>
+              <th className="clickable-th" onClick={() => toggleSort('visitDate')}>Date {sortConfig.key === 'visitDate' ? (sortConfig.dir === 'asc' ? '▲' : '▼') : '↕'}</th>
+              <th className="clickable-th" onClick={() => toggleSort('residentId')}>Resident ID {sortConfig.key === 'residentId' ? (sortConfig.dir === 'asc' ? '▲' : '▼') : '↕'}</th>
+              <th className="clickable-th" onClick={() => toggleSort('visitType')}>Visit Type {sortConfig.key === 'visitType' ? (sortConfig.dir === 'asc' ? '▲' : '▼') : '↕'}</th>
+              <th className="clickable-th" onClick={() => toggleSort('socialWorker')}>Social Worker {sortConfig.key === 'socialWorker' ? (sortConfig.dir === 'asc' ? '▲' : '▼') : '↕'}</th>
               <th>Observations</th>
               <th>Safety Concerns</th>
               <th>Actions</th>
@@ -173,7 +173,7 @@ export default function HomeVisits() {
             setPage(p);
             fetchVisits(p, pageSize);
           }}>Go</button>
-          <select className="filter-select" value={pageSize} onChange={(e) => {
+          <select className="filter-select" style={{ marginLeft: 'auto' }} value={pageSize} onChange={(e) => {
             const size = Number(e.target.value);
             setPageSize(size);
             setPage(1);

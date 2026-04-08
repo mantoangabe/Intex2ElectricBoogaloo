@@ -99,11 +99,15 @@ export default function Reports() {
     `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   const conversionCellStyle = (prob?: number | null) => {
     if (prob == null) return undefined;
-    const hue = Math.round(Math.max(0, Math.min(120, prob * 120)));
-    const light = Math.round(96 - prob * 26);
+    const pct = prob * 100;
+    let bg = '#fee2e2';
+    let fg = '#7f1d1d';
+    if (pct >= 81) { bg = '#86efac'; fg = '#14532d'; }
+    else if (pct >= 70) { bg = '#dcfce7'; fg = '#166534'; }
+    else if (pct >= 50) { bg = '#fef9c3'; fg = '#713f12'; }
     return {
-      backgroundColor: `hsl(${hue} 85% ${light}%)`,
-      color: `hsl(${hue} 70% 18%)`,
+      backgroundColor: bg,
+      color: fg,
       fontWeight: 700 as const,
       borderRadius: '6px',
       padding: '0.2rem 0.45rem',
@@ -195,7 +199,7 @@ export default function Reports() {
           <thead>
             <tr>
               <th>Month</th>
-              <th className="clickable-th" onClick={() => setMetricSortDir(prev => prev === 'asc' ? 'desc' : 'asc')}>Safehouse ID</th>
+              <th className="clickable-th" onClick={() => setMetricSortDir(prev => prev === 'asc' ? 'desc' : 'asc')}>Safehouse ID {metricSortDir === 'asc' ? '▲' : '▼'}</th>
               <th>Active Residents</th>
               <th>Avg Education Progress</th>
               <th>Avg Health Score</th>
@@ -236,7 +240,7 @@ export default function Reports() {
             setPage(p);
             fetchMetrics(p, pageSize);
           }}>Go</button>
-          <select className="filter-select" value={pageSize} onChange={(e) => {
+          <select className="filter-select" style={{ marginLeft: 'auto' }} value={pageSize} onChange={(e) => {
             const size = Number(e.target.value);
             setPageSize(size);
             setPage(1);
