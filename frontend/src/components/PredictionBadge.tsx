@@ -9,11 +9,7 @@ export default function PredictionBadge({ probability }: PredictionBadgeProps) {
     'Low';
 
   return (
-    <span
-      className={`status-badge ${
-        tier === 'High' ? 'status-critical' : tier === 'Medium' ? 'status-pending' : 'status-active'
-      }`}
-    >
+    <span className={`prediction-badge prediction-${tier.toLowerCase()}`}>
       {tier}
     </span>
   );

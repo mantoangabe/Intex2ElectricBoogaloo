@@ -21,8 +21,9 @@ interface ProcessRecording {
 }
 
 export default function ProcessRecording() {
+  const PAGE_SIZE = 25;
   const [recordings, setRecordings] = useState<ProcessRecording[]>([]);
-  const [skip, setSkip] = useState(0);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
@@ -32,16 +33,12 @@ export default function ProcessRecording() {
   const [formData, setFormData] = useState<Partial<ProcessRecording>>({});
   const [saving, setSaving] = useState(false);
 
-  const fetchRecordings = (skipVal: number) => {
+  const fetchRecordings = (pageVal: number) => {
     setLoading(true);
-    apiClient.get<ProcessRecording[]>('/ProcessRecordings', { params: { skip: skipVal, take: 25 } })
+    apiClient.get<ProcessRecording[]>('/ProcessRecordings', { params: { skip: (pageVal - 1) * PAGE_SIZE, take: PAGE_SIZE } })
       .then(res => {
-        setHasMore(res.data.length === 25);
-        if (skipVal === 0) {
-          setRecordings(res.data);
-        } else {
-          setRecordings(prev => [...prev, ...res.data]);
-        }
+        setHasMore(res.data.length === PAGE_SIZE);
+        setRecordings(res.data);
         setError(null);
       })
       .catch(() => setError('Failed to load process recordings.'))
@@ -49,14 +46,8 @@ export default function ProcessRecording() {
   };
 
   useEffect(() => {
-    fetchRecordings(0);
+    fetchRecordings(1);
   }, []);
-
-  const handleShowMore = () => {
-    const newSkip = skip + 25;
-    setSkip(newSkip);
-    fetchRecordings(newSkip);
-  };
 
   const openModal = (recording: ProcessRecording | null) => {
     setEditRecording(recording);
@@ -153,13 +144,15 @@ export default function ProcessRecording() {
             ))}
           </tbody>
         </table>
-        {hasMore && (
-          <div style={{ textAlign: 'center', marginTop: '1rem' }}>
-            <button className="btn btn-secondary" onClick={handleShowMore} disabled={loading}>
-              {loading ? 'Loading...' : 'Show More'}
-            </button>
-          </div>
-        )}
+        <div className="pagination-row">
+          <button className="btn btn-secondary btn-sm" disabled={page === 1 || loading} onClick={() => {
+            const p = page - 1; setPage(p); fetchRecordings(p);
+          }}>Previous</button>
+          <span>Page {page}</span>
+          <button className="btn btn-secondary btn-sm" disabled={!hasMore || loading} onClick={() => {
+            const p = page + 1; setPage(p); fetchRecordings(p);
+          }}>Next</button>
+        </div>
       </div>
 
       <div className="admin-card">

@@ -32,15 +32,17 @@ interface Donation {
 }
 
 export default function Donors() {
+  const PAGE_SIZE = 25;
   const [supporters, setSupporters] = useState<Supporter[]>([]);
   const [donations, setDonations] = useState<Donation[]>([]);
   const [predictions, setPredictions] = useState<Record<number, DonorRetentionPrediction>>({});
-  const [supporterSkip, setSupporterSkip] = useState(0);
-  const [donationSkip, setDonationSkip] = useState(0);
+  const [supporterPage, setSupporterPage] = useState(1);
+  const [donationPage, setDonationPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [supporterHasMore, setSupporterHasMore] = useState(false);
   const [donationHasMore, setDonationHasMore] = useState(false);
+  const [activeSection, setActiveSection] = useState<'donors' | 'donations'>('donors');
   const predictionMeta = usePredictionMeta('/DonorRetentionPredictions/meta/latest', ENABLE_ML_PREDICTIONS);
 
   // Supporter modal state
@@ -55,32 +57,24 @@ export default function Donors() {
   const [donationFormData, setDonationFormData] = useState<Partial<Donation>>({});
   const [savingDonation, setSavingDonation] = useState(false);
 
-  const fetchSupporters = (skip: number) => {
+  const fetchSupporters = (page: number) => {
     setLoading(true);
-    apiClient.get<Supporter[]>('/Supporters', { params: { skip, take: 25 } })
+    apiClient.get<Supporter[]>('/Supporters', { params: { skip: (page - 1) * PAGE_SIZE, take: PAGE_SIZE } })
       .then(res => {
-        setSupporterHasMore(res.data.length === 25);
-        if (skip === 0) {
-          setSupporters(res.data);
-        } else {
-          setSupporters(prev => [...prev, ...res.data]);
-        }
+        setSupporterHasMore(res.data.length === PAGE_SIZE);
+        setSupporters(res.data);
         setError(null);
       })
       .catch(() => setError('Failed to load donors.'))
       .finally(() => setLoading(false));
   };
 
-  const fetchDonations = (skip: number) => {
+  const fetchDonations = (page: number) => {
     setLoading(true);
-    apiClient.get<Donation[]>('/Donations', { params: { skip, take: 25 } })
+    apiClient.get<Donation[]>('/Donations', { params: { skip: (page - 1) * PAGE_SIZE, take: PAGE_SIZE } })
       .then(res => {
-        setDonationHasMore(res.data.length === 25);
-        if (skip === 0) {
-          setDonations(res.data);
-        } else {
-          setDonations(prev => [...prev, ...res.data]);
-        }
+        setDonationHasMore(res.data.length === PAGE_SIZE);
+        setDonations(res.data);
         setError(null);
       })
       .catch(() => setError('Failed to load donations.'))
@@ -88,8 +82,8 @@ export default function Donors() {
   };
 
   useEffect(() => {
-    fetchSupporters(0);
-    fetchDonations(0);
+    fetchSupporters(1);
+    fetchDonations(1);
     if (ENABLE_ML_PREDICTIONS) {
       apiClient
         .get<DonorRetentionPrediction[]>('/DonorRetentionPredictions', {
@@ -106,17 +100,8 @@ export default function Donors() {
     }
   }, []);
 
-  const handleShowMoreSupporters = () => {
-    const newSkip = supporterSkip + 25;
-    setSupporterSkip(newSkip);
-    fetchSupporters(newSkip);
-  };
-
-  const handleShowMoreDonations = () => {
-    const newSkip = donationSkip + 25;
-    setDonationSkip(newSkip);
-    fetchDonations(newSkip);
-  };
+  const fmtUsd = (value: number) =>
+    `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   const openSupporterModal = (supporter: Supporter | null) => {
     setEditSupporter(supporter);
@@ -229,9 +214,23 @@ export default function Donors() {
         </select>
       </div>
 
-      <div className="admin-card">
+      <div className="toggle-group">
+        <button
+          className={`btn btn-sm ${activeSection === 'donors' ? 'btn-primary' : 'btn-secondary'}`}
+          onClick={() => setActiveSection('donors')}
+        >
+          Donor List
+        </button>
+        <button
+          className={`btn btn-sm ${activeSection === 'donations' ? 'btn-primary' : 'btn-secondary'}`}
+          onClick={() => setActiveSection('donations')}
+        >
+          Donation Allocation
+        </button>
+      </div>
+
+      {activeSection === 'donors' && <div className="admin-card">
         <h3>Donor List</h3>
-        {ENABLE_ML_PREDICTIONS && <LastRefreshChip meta={predictionMeta} label="Donor lapse model" />}
         <table className="admin-table">
           <thead>
             <tr>
@@ -240,16 +239,17 @@ export default function Donors() {
               <th>Status</th>
               {ENABLE_ML_PREDICTIONS && <th>Lapse Risk</th>}
               {ENABLE_ML_PREDICTIONS && <th>Lapse Probability</th>}
+              {ENABLE_ML_PREDICTIONS && <th>Reach Out</th>}
               <th>Total Contributed</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {error && (
-              <tr><td colSpan={ENABLE_ML_PREDICTIONS ? 7 : 5} className="placeholder-row">{error}</td></tr>
+              <tr><td colSpan={ENABLE_ML_PREDICTIONS ? 8 : 5} className="placeholder-row">{error}</td></tr>
             )}
             {supporters.length === 0 && !error && (
-              <tr><td colSpan={ENABLE_ML_PREDICTIONS ? 7 : 5} className="placeholder-row">No donors found.</td></tr>
+              <tr><td colSpan={ENABLE_ML_PREDICTIONS ? 8 : 5} className="placeholder-row">No donors found.</td></tr>
             )}
             {supporters.map(s => (
               <tr key={s.supporterId}>
@@ -262,6 +262,9 @@ export default function Donors() {
                 {ENABLE_ML_PREDICTIONS && (
                   <td>{predictions[s.supporterId] ? `${(predictions[s.supporterId].lapseRiskProbability * 100).toFixed(1)}%` : '—'}</td>
                 )}
+                {ENABLE_ML_PREDICTIONS && (
+                  <td>{predictions[s.supporterId] ? (predictions[s.supporterId].lapseRiskProbability >= 0.5 ? 'Yes' : 'No') : '—'}</td>
+                )}
                 <td>{totalBySupporterId[s.supporterId] ? `$${totalBySupporterId[s.supporterId].toFixed(2)}` : '—'}</td>
                 <td style={{ display: 'flex', gap: '0.5rem' }}>
                   <button className="btn btn-sm btn-secondary" onClick={() => openSupporterModal(s)}>Edit</button>
@@ -271,16 +274,23 @@ export default function Donors() {
             ))}
           </tbody>
         </table>
-        {supporterHasMore && (
-          <div style={{ textAlign: 'center', marginTop: '1rem' }}>
-            <button className="btn btn-secondary" onClick={handleShowMoreSupporters} disabled={loading}>
-              {loading ? 'Loading...' : 'Show More'}
-            </button>
+        <div className="pagination-row">
+          <button className="btn btn-secondary btn-sm" disabled={supporterPage === 1 || loading} onClick={() => {
+            const p = supporterPage - 1; setSupporterPage(p); fetchSupporters(p);
+          }}>Previous</button>
+          <span>Page {supporterPage}</span>
+          <button className="btn btn-secondary btn-sm" disabled={!supporterHasMore || loading} onClick={() => {
+            const p = supporterPage + 1; setSupporterPage(p); fetchSupporters(p);
+          }}>Next</button>
+        </div>
+        {ENABLE_ML_PREDICTIONS && (
+          <div style={{ marginTop: '0.75rem' }}>
+            <LastRefreshChip meta={predictionMeta} label="Donor lapse model" />
           </div>
         )}
-      </div>
+      </div>}
 
-      <div className="admin-card">
+      {activeSection === 'donations' && <div className="admin-card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
           <h3 style={{ margin: 0 }}>Donation Allocation</h3>
           <button className="btn btn-primary btn-sm" onClick={() => openDonationModal(null)}>+ Add Donation</button>
@@ -306,7 +316,7 @@ export default function Donors() {
                 <td>{d.supporterId}</td>
                 <td>{d.donationType}</td>
                 <td>{new Date(d.donationDate).toLocaleDateString()}</td>
-                <td>{d.amount != null ? `${d.currencyCode ?? '$'}${d.amount.toFixed(2)}` : d.estimatedValue != null ? `~$${d.estimatedValue.toFixed(2)}` : '—'}</td>
+                <td>{d.amount != null ? fmtUsd(d.amount) : d.estimatedValue != null ? `~${fmtUsd(d.estimatedValue)}` : '—'}</td>
                 <td style={{ display: 'flex', gap: '0.5rem' }}>
                   <button className="btn btn-sm btn-secondary" onClick={() => openDonationModal(d)}>Edit</button>
                   <button className="btn btn-sm btn-danger" onClick={() => deleteDonation(d.donationId!)}>Delete</button>
@@ -315,14 +325,16 @@ export default function Donors() {
             ))}
           </tbody>
         </table>
-        {donationHasMore && (
-          <div style={{ textAlign: 'center', marginTop: '1rem' }}>
-            <button className="btn btn-secondary" onClick={handleShowMoreDonations} disabled={loading}>
-              {loading ? 'Loading...' : 'Show More'}
-            </button>
-          </div>
-        )}
-      </div>
+        <div className="pagination-row">
+          <button className="btn btn-secondary btn-sm" disabled={donationPage === 1 || loading} onClick={() => {
+            const p = donationPage - 1; setDonationPage(p); fetchDonations(p);
+          }}>Previous</button>
+          <span>Page {donationPage}</span>
+          <button className="btn btn-secondary btn-sm" disabled={!donationHasMore || loading} onClick={() => {
+            const p = donationPage + 1; setDonationPage(p); fetchDonations(p);
+          }}>Next</button>
+        </div>
+      </div>}
 
       {/* Supporter Modal */}
       {showSupporterModal && (

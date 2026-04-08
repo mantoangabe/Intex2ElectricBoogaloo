@@ -26,10 +26,11 @@ interface Resident {
 }
 
 export default function CaseloadInventory() {
+  const PAGE_SIZE = 25;
   const [residents, setResidents] = useState<Resident[]>([]);
   const [progressPredictions, setProgressPredictions] = useState<Record<number, ResidentProgressPrediction>>({});
   const [incidentPredictions, setIncidentPredictions] = useState<Record<number, IncidentRiskPrediction>>({});
-  const [skip, setSkip] = useState(0);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
@@ -41,16 +42,12 @@ export default function CaseloadInventory() {
   const [formData, setFormData] = useState<Partial<Resident>>({});
   const [saving, setSaving] = useState(false);
 
-  const fetchResidents = (skipVal: number) => {
+  const fetchResidents = (pageVal: number) => {
     setLoading(true);
-    apiClient.get<Resident[]>('/Residents', { params: { skip: skipVal, take: 25 } })
+    apiClient.get<Resident[]>('/Residents', { params: { skip: (pageVal - 1) * PAGE_SIZE, take: PAGE_SIZE } })
       .then(res => {
-        setHasMore(res.data.length === 25);
-        if (skipVal === 0) {
-          setResidents(res.data);
-        } else {
-          setResidents(prev => [...prev, ...res.data]);
-        }
+        setHasMore(res.data.length === PAGE_SIZE);
+        setResidents(res.data);
         setError(null);
       })
       .catch(() => setError('Failed to load residents.'))
@@ -58,7 +55,7 @@ export default function CaseloadInventory() {
   };
 
   useEffect(() => {
-    fetchResidents(0);
+    fetchResidents(1);
     if (ENABLE_ML_PREDICTIONS) {
       apiClient
         .get<ResidentProgressPrediction[]>('/ResidentProgressPredictions', {
@@ -87,12 +84,6 @@ export default function CaseloadInventory() {
         .catch(() => setIncidentPredictions({}));
     }
   }, []);
-
-  const handleShowMore = () => {
-    const newSkip = skip + 25;
-    setSkip(newSkip);
-    fetchResidents(newSkip);
-  };
 
   const openModal = (resident: Resident | null) => {
     setEditResident(resident);
@@ -167,12 +158,6 @@ export default function CaseloadInventory() {
 
       <div className="admin-card">
         <h3>Resident Profiles</h3>
-        {ENABLE_ML_PREDICTIONS && (
-          <div style={{ display: 'flex', gap: '1rem', marginBottom: '0.75rem' }}>
-            <LastRefreshChip meta={progressMeta} label="Progress model" />
-            <LastRefreshChip meta={incidentMeta} label="Incident model" />
-          </div>
-        )}
         <table className="admin-table">
           <thead>
             <tr>
@@ -226,11 +211,19 @@ export default function CaseloadInventory() {
             ))}
           </tbody>
         </table>
-        {hasMore && (
-          <div style={{ textAlign: 'center', marginTop: '1rem' }}>
-            <button className="btn btn-secondary" onClick={handleShowMore} disabled={loading}>
-              {loading ? 'Loading...' : 'Show More'}
-            </button>
+        <div className="pagination-row">
+          <button className="btn btn-secondary btn-sm" disabled={page === 1 || loading} onClick={() => {
+            const p = page - 1; setPage(p); fetchResidents(p);
+          }}>Previous</button>
+          <span>Page {page}</span>
+          <button className="btn btn-secondary btn-sm" disabled={!hasMore || loading} onClick={() => {
+            const p = page + 1; setPage(p); fetchResidents(p);
+          }}>Next</button>
+        </div>
+        {ENABLE_ML_PREDICTIONS && (
+          <div style={{ display: 'flex', gap: '1rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
+            <LastRefreshChip meta={progressMeta} label="Progress model" />
+            <LastRefreshChip meta={incidentMeta} label="Incident model" />
           </div>
         )}
       </div>
