@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import Navbar from '../../components/Navbar';
 import '../../styles/styles.css';
 
@@ -8,7 +8,7 @@ export default function DonorDashboard() {
   const [programArea, setProgramArea] = useState('General');
   const [note, setNote] = useState('');
 
-  const handleDonate = (e: React.FormEvent) => {
+  const handleDonate = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setDonationAmount('');
     setDonationType('Monetary');
@@ -111,7 +111,10 @@ export default function DonorDashboard() {
       </main>
 
       <footer className="footer">
-        <p>&copy; {new Date().getFullYear()} SafeHaven PH. All rights reserved. | <a href="/privacy">Privacy Policy</a></p>
+        <p>
+          &copy; {new Date().getFullYear()} SafeHaven PH. All rights reserved. | <a href="/privacy">Privacy Policy</a> |{' '}
+          <a href="/cookies">Cookie Policy</a>
+        </p>
       </footer>
     </div>
   );

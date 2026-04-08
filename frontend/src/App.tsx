@@ -6,6 +6,8 @@ import LoginPage from './pages/LoginPage';
 import DonorImpact from './pages/donor/DonorImpact';
 import DonorDashboard from './pages/donor/DonorDashboard';
 import PrivacyPolicy from './pages/PrivacyPolicy';
+import CookiePolicyPage from './pages/CookiePolicyPage';
+import CookieConsentBanner from './components/CookieConsentBanner';
 
 // Admin pages
 import AdminDashboard from './pages/AdminDashboard';
@@ -14,29 +16,32 @@ import CaseloadInventory from './pages/admin/CaseloadInventory';
 import ProcessRecording from './pages/admin/ProcessRecording';
 import HomeVisits from './pages/admin/HomeVisits';
 import Reports from './pages/admin/Reports';
-import RequireAdmin from './components/RequireAdmin';
 
 function App() {
   return (
-    <Routes>
-      {/* Public pages */}
-      <Route path="/" element={<HomePage />} />
-      <Route path="/donor" element={<DonorImpact />} />
-      <Route path="/donor/dashboard" element={<DonorDashboard />} />
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/privacy" element={<PrivacyPolicy />} />
+    <>
+      <Routes>
+        {/* Public pages */}
+        <Route path="/" element={<HomePage />} />
+        <Route path="/donor" element={<DonorImpact />} />
+        <Route path="/donor/dashboard" element={<DonorDashboard />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/cookies" element={<CookiePolicyPage />} />
 
-      {/* Admin pages */}
-      <Route path="/admin/dashboard" element={<RequireAdmin><AdminDashboard /></RequireAdmin>} />
-      <Route path="/admin/donors" element={<RequireAdmin><Donors /></RequireAdmin>} />
-      <Route path="/admin/caseload" element={<RequireAdmin><CaseloadInventory /></RequireAdmin>} />
-      <Route path="/admin/process-recording" element={<RequireAdmin><ProcessRecording /></RequireAdmin>} />
-      <Route path="/admin/home-visits" element={<RequireAdmin><HomeVisits /></RequireAdmin>} />
-      <Route path="/admin/reports" element={<RequireAdmin><Reports /></RequireAdmin>} />
+        {/* Admin pages */}
+        <Route path="/admin/dashboard" element={<AdminDashboard />} />
+        <Route path="/admin/donors" element={<Donors />} />
+        <Route path="/admin/caseload" element={<CaseloadInventory />} />
+        <Route path="/admin/process-recording" element={<ProcessRecording />} />
+        <Route path="/admin/home-visits" element={<HomeVisits />} />
+        <Route path="/admin/reports" element={<Reports />} />
 
-      {/* Fallback */}
-      <Route path="*" element={<Navigate to="/" />} />
-    </Routes>
+        {/* Fallback */}
+        <Route path="*" element={<Navigate to="/" />} />
+      </Routes>
+      <CookieConsentBanner />
+    </>
   );
 }
 
