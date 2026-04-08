@@ -21,9 +21,19 @@ interface HomeVisitation {
 }
 
 export default function HomeVisits() {
-  const PAGE_SIZE = 25;
+  const DEFAULT_PAGE_SIZE = 25;
   const [visits, setVisits] = useState<HomeVisitation[]>([]);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [totalCount, setTotalCount] = useState(0);
+  const [jumpPage, setJumpPage] = useState('1');
+  const [sortConfig, setSortConfig] = useState<{ key: keyof HomeVisitation; dir: 'asc' | 'desc' }>({ key: 'visitDate', dir: 'desc' });
+  const sortedVisits = [...visits].sort((a, b) => {
+    const dir = sortConfig.dir === 'asc' ? 1 : -1;
+    return String(a[sortConfig.key] ?? '').localeCompare(String(b[sortConfig.key] ?? '')) * dir;
+  });
+  const toggleSort = (key: keyof HomeVisitation) =>
+    setSortConfig(prev => ({ key, dir: prev.key === key && prev.dir === 'asc' ? 'desc' : 'asc' }));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
@@ -33,11 +43,11 @@ export default function HomeVisits() {
   const [formData, setFormData] = useState<Partial<HomeVisitation>>({});
   const [saving, setSaving] = useState(false);
 
-  const fetchVisits = (pageVal: number) => {
+  const fetchVisits = (pageVal: number, size: number) => {
     setLoading(true);
-    apiClient.get<HomeVisitation[]>('/HomeVisitations', { params: { skip: (pageVal - 1) * PAGE_SIZE, take: PAGE_SIZE } })
+    apiClient.get<HomeVisitation[]>('/HomeVisitations', { params: { skip: (pageVal - 1) * size, take: size } })
       .then(res => {
-        setHasMore(res.data.length === PAGE_SIZE);
+        setHasMore(res.data.length === size);
         setVisits(res.data);
         setError(null);
       })
@@ -46,7 +56,8 @@ export default function HomeVisits() {
   };
 
   useEffect(() => {
-    fetchVisits(1);
+    fetchVisits(1, pageSize);
+    apiClient.get<HomeVisitation[]>('/HomeVisitations', { params: { skip: 0, take: 100000 } }).then(r => setTotalCount(r.data.length)).catch(() => {});
   }, []);
 
   const openModal = (visit: HomeVisitation | null) => {
@@ -69,7 +80,7 @@ export default function HomeVisits() {
       } else {
         await apiClient.post('/HomeVisitations', formData);
       }
-      fetchVisits(0);
+      fetchVisits(1, pageSize);
       closeModal();
     } catch (err) {
       alert('Failed to save visit.');
@@ -82,7 +93,7 @@ export default function HomeVisits() {
     if (window.confirm('Delete this visit?')) {
       try {
         await apiClient.delete(`/HomeVisitations/${id}`);
-        fetchVisits(0);
+        fetchVisits(page, pageSize);
       } catch (err) {
         alert('Failed to delete visit.');
       }
@@ -118,10 +129,10 @@ export default function HomeVisits() {
         <table className="admin-table">
           <thead>
             <tr>
-              <th>Date</th>
-              <th>Resident ID</th>
-              <th>Visit Type</th>
-              <th>Social Worker</th>
+              <th className="clickable-th" onClick={() => toggleSort('visitDate')}>Date</th>
+              <th className="clickable-th" onClick={() => toggleSort('residentId')}>Resident ID</th>
+              <th className="clickable-th" onClick={() => toggleSort('visitType')}>Visit Type</th>
+              <th className="clickable-th" onClick={() => toggleSort('socialWorker')}>Social Worker</th>
               <th>Observations</th>
               <th>Safety Concerns</th>
               <th>Actions</th>
@@ -134,7 +145,7 @@ export default function HomeVisits() {
             {visits.length === 0 && !error && (
               <tr><td colSpan={7} className="placeholder-row">No visits recorded yet. Click "Log Visit" to create a new record.</td></tr>
             )}
-            {visits.map(v => (
+            {sortedVisits.map(v => (
               <tr key={v.visitationId}>
                 <td>{new Date(v.visitDate).toLocaleDateString()}</td>
                 <td>{v.residentId}</td>
@@ -152,11 +163,28 @@ export default function HomeVisits() {
         </table>
         <div className="pagination-row">
           <button className="btn btn-secondary btn-sm" disabled={page === 1 || loading} onClick={() => {
-            const p = page - 1; setPage(p); fetchVisits(p);
+            const p = page - 1; setPage(p); fetchVisits(p, pageSize);
           }}>Previous</button>
-          <span>Page {page}</span>
+          <span>Page {page} of {Math.max(1, Math.ceil(totalCount / pageSize))}</span>
+          <input className="pagination-jump-input" type="number" min={1} max={Math.max(1, Math.ceil(totalCount / pageSize))} value={jumpPage} onChange={(e) => setJumpPage(e.target.value)} />
+          <button className="btn btn-secondary btn-sm" onClick={() => {
+            const max = Math.max(1, Math.ceil(totalCount / pageSize));
+            const p = Math.min(max, Math.max(1, Number(jumpPage) || 1));
+            setPage(p);
+            fetchVisits(p, pageSize);
+          }}>Go</button>
+          <select className="filter-select" value={pageSize} onChange={(e) => {
+            const size = Number(e.target.value);
+            setPageSize(size);
+            setPage(1);
+            fetchVisits(1, size);
+          }}>
+            <option value={10}>10 / page</option>
+            <option value={25}>25 / page</option>
+            <option value={50}>50 / page</option>
+          </select>
           <button className="btn btn-secondary btn-sm" disabled={!hasMore || loading} onClick={() => {
-            const p = page + 1; setPage(p); fetchVisits(p);
+            const p = page + 1; setPage(p); fetchVisits(p, pageSize);
           }}>Next</button>
         </div>
       </div>

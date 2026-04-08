@@ -93,7 +93,7 @@ export default function AdminDashboard() {
             </div>
             <div className="metric-card">
               <div className="metric-value">{fmt(highResidentRiskCount)}</div>
-              <div className="metric-label">Residents at High &quot;Low Progress&quot; Risk (next review period)</div>
+              <div className="metric-label">Residents at High &quot;Low Progress&quot; Risk</div>
             </div>
             <div className="metric-card">
               <div className="metric-value">{fmt(highIncidentRiskCount)}</div>

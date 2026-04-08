@@ -21,9 +21,19 @@ interface ProcessRecording {
 }
 
 export default function ProcessRecording() {
-  const PAGE_SIZE = 25;
+  const DEFAULT_PAGE_SIZE = 25;
   const [recordings, setRecordings] = useState<ProcessRecording[]>([]);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [totalCount, setTotalCount] = useState(0);
+  const [jumpPage, setJumpPage] = useState('1');
+  const [sortConfig, setSortConfig] = useState<{ key: keyof ProcessRecording; dir: 'asc' | 'desc' }>({ key: 'sessionDate', dir: 'desc' });
+  const sortedRecordings = [...recordings].sort((a, b) => {
+    const dir = sortConfig.dir === 'asc' ? 1 : -1;
+    return String(a[sortConfig.key] ?? '').localeCompare(String(b[sortConfig.key] ?? '')) * dir;
+  });
+  const toggleSort = (key: keyof ProcessRecording) =>
+    setSortConfig(prev => ({ key, dir: prev.key === key && prev.dir === 'asc' ? 'desc' : 'asc' }));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
@@ -33,11 +43,11 @@ export default function ProcessRecording() {
   const [formData, setFormData] = useState<Partial<ProcessRecording>>({});
   const [saving, setSaving] = useState(false);
 
-  const fetchRecordings = (pageVal: number) => {
+  const fetchRecordings = (pageVal: number, size: number) => {
     setLoading(true);
-    apiClient.get<ProcessRecording[]>('/ProcessRecordings', { params: { skip: (pageVal - 1) * PAGE_SIZE, take: PAGE_SIZE } })
+    apiClient.get<ProcessRecording[]>('/ProcessRecordings', { params: { skip: (pageVal - 1) * size, take: size } })
       .then(res => {
-        setHasMore(res.data.length === PAGE_SIZE);
+        setHasMore(res.data.length === size);
         setRecordings(res.data);
         setError(null);
       })
@@ -46,7 +56,8 @@ export default function ProcessRecording() {
   };
 
   useEffect(() => {
-    fetchRecordings(1);
+    fetchRecordings(1, pageSize);
+    apiClient.get<ProcessRecording[]>('/ProcessRecordings', { params: { skip: 0, take: 100000 } }).then(r => setTotalCount(r.data.length)).catch(() => {});
   }, []);
 
   const openModal = (recording: ProcessRecording | null) => {
@@ -69,7 +80,7 @@ export default function ProcessRecording() {
       } else {
         await apiClient.post('/ProcessRecordings', formData);
       }
-      fetchRecordings(0);
+      fetchRecordings(1, pageSize);
       closeModal();
     } catch (err) {
       alert('Failed to save recording.');
@@ -82,7 +93,7 @@ export default function ProcessRecording() {
     if (window.confirm('Delete this recording?')) {
       try {
         await apiClient.delete(`/ProcessRecordings/${id}`);
-        fetchRecordings(0);
+        fetchRecordings(page, pageSize);
       } catch (err) {
         alert('Failed to delete recording.');
       }
@@ -112,10 +123,10 @@ export default function ProcessRecording() {
         <table className="admin-table">
           <thead>
             <tr>
-              <th>Date</th>
-              <th>Resident ID</th>
-              <th>Social Worker</th>
-              <th>Session Type</th>
+              <th className="clickable-th" onClick={() => toggleSort('sessionDate')}>Date</th>
+              <th className="clickable-th" onClick={() => toggleSort('residentId')}>Resident ID</th>
+              <th className="clickable-th" onClick={() => toggleSort('socialWorker')}>Social Worker</th>
+              <th className="clickable-th" onClick={() => toggleSort('sessionType')}>Session Type</th>
               <th>Emotional State</th>
               <th>Follow-up</th>
               <th>Actions</th>
@@ -128,7 +139,7 @@ export default function ProcessRecording() {
             {recordings.length === 0 && !error && (
               <tr><td colSpan={7} className="placeholder-row">No session records found.</td></tr>
             )}
-            {recordings.map(r => (
+            {sortedRecordings.map(r => (
               <tr key={r.recordingId}>
                 <td>{new Date(r.sessionDate).toLocaleDateString()}</td>
                 <td>{r.residentId}</td>
@@ -146,11 +157,28 @@ export default function ProcessRecording() {
         </table>
         <div className="pagination-row">
           <button className="btn btn-secondary btn-sm" disabled={page === 1 || loading} onClick={() => {
-            const p = page - 1; setPage(p); fetchRecordings(p);
+            const p = page - 1; setPage(p); fetchRecordings(p, pageSize);
           }}>Previous</button>
-          <span>Page {page}</span>
+          <span>Page {page} of {Math.max(1, Math.ceil(totalCount / pageSize))}</span>
+          <input className="pagination-jump-input" type="number" min={1} max={Math.max(1, Math.ceil(totalCount / pageSize))} value={jumpPage} onChange={(e) => setJumpPage(e.target.value)} />
+          <button className="btn btn-secondary btn-sm" onClick={() => {
+            const max = Math.max(1, Math.ceil(totalCount / pageSize));
+            const p = Math.min(max, Math.max(1, Number(jumpPage) || 1));
+            setPage(p);
+            fetchRecordings(p, pageSize);
+          }}>Go</button>
+          <select className="filter-select" value={pageSize} onChange={(e) => {
+            const size = Number(e.target.value);
+            setPageSize(size);
+            setPage(1);
+            fetchRecordings(1, size);
+          }}>
+            <option value={10}>10 / page</option>
+            <option value={25}>25 / page</option>
+            <option value={50}>50 / page</option>
+          </select>
           <button className="btn btn-secondary btn-sm" disabled={!hasMore || loading} onClick={() => {
-            const p = page + 1; setPage(p); fetchRecordings(p);
+            const p = page + 1; setPage(p); fetchRecordings(p, pageSize);
           }}>Next</button>
         </div>
       </div>
