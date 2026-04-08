@@ -7,6 +7,9 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+var applyMigrations = builder.Configuration.GetValue<bool>("StartupTasks:ApplyMigrations");
+var seedPredictions = builder.Configuration.GetValue<bool>("StartupTasks:SeedPredictions");
 
 // Add DbContext
 builder.Services.AddDbContext<IntexDbContext>(options =>
@@ -51,9 +54,19 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("ProdCors", policy =>
+    options.AddPolicy("AppCors", policy =>
     {
-        policy.WithOrigins("https://intex.mantoanfam.top")
+        if (allowedOrigins.Length > 0)
+        {
+            policy.WithOrigins(allowedOrigins)
+                .AllowAnyHeader()
+                .AllowAnyMethod()
+                .AllowCredentials();
+            return;
+        }
+
+        // Safe local fallback for development if config is missing.
+        policy.WithOrigins("http://localhost:5173", "https://localhost:5173")
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
@@ -65,15 +78,38 @@ var app = builder.Build();
 // Seed database with roles
 using (var scope = app.Services.CreateScope())
 {
-    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-    var roles = new[] { "Admin", "Donor" };
-    
-    foreach (var role in roles)
+    var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("Startup");
+
+    try
     {
-        if (!await roleManager.RoleExistsAsync(role))
+        var db = scope.ServiceProvider.GetRequiredService<IntexDbContext>();
+
+        if (applyMigrations)
         {
-            await roleManager.CreateAsync(new IdentityRole(role));
+            await db.Database.MigrateAsync();
+            logger.LogInformation("Applied database migrations.");
         }
+
+        var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+        var roles = new[] { "Admin", "Donor" };
+
+        foreach (var role in roles)
+        {
+            if (!await roleManager.RoleExistsAsync(role))
+            {
+                await roleManager.CreateAsync(new IdentityRole(role));
+            }
+        }
+
+        if (seedPredictions)
+        {
+            await PredictionSeedService.SeedAsync(db);
+            logger.LogInformation("Seeded prediction tables.");
+        }
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Startup data initialization failed; app will continue running.");
     }
 }
 
@@ -83,7 +119,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseCors("ProdCors");
+app.UseCors("AppCors");
 app.UseForwardedHeaders();
 
 app.UseHttpsRedirection();
