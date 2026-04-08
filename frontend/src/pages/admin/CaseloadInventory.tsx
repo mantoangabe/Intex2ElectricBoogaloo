@@ -202,7 +202,10 @@ export default function CaseloadInventory() {
       </div>
 
       <div className="admin-card">
-        <h3>Resident Profiles</h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h3>Resident Profiles</h3>
+          <small className="refresh-chip">Showing {filteredResidents.length} of {totalCount} records</small>
+        </div>
         <table className="admin-table">
           <thead>
             <tr>

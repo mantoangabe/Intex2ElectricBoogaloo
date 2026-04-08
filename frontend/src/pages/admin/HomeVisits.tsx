@@ -125,7 +125,10 @@ export default function HomeVisits() {
       </div>
 
       <div className="admin-card">
-        <h3>Home Visits</h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h3>Home Visits</h3>
+          <small className="refresh-chip">Showing {sortedVisits.length} of {totalCount} records</small>
+        </div>
         <table className="admin-table">
           <thead>
             <tr>
