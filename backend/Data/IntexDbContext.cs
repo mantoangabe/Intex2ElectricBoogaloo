@@ -28,4 +28,8 @@ public class IntexDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<SocialMediaPost> SocialMediaPosts { get; set; } = null!;
     public DbSet<SafehouseMonthlyMetric> SafehouseMonthlyMetrics { get; set; } = null!;
     public DbSet<PublicImpactSnapshot> PublicImpactSnapshots { get; set; } = null!;
+    public DbSet<DonorRetentionPrediction> DonorRetentionPredictions { get; set; } = null!;
+    public DbSet<ResidentProgressPrediction> ResidentProgressPredictions { get; set; } = null!;
+    public DbSet<IncidentRiskPrediction> IncidentRiskPredictions { get; set; } = null!;
+    public DbSet<SocialDonationPrediction> SocialDonationPredictions { get; set; } = null!;
 }

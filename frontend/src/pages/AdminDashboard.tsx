@@ -2,12 +2,29 @@ import { useEffect, useState } from 'react';
 import AdminLayout from '../components/AdminLayout';
 import '../styles/AdminDashboard.css';
 import apiClient from '../api/apiClient';
+import LastRefreshChip from '../components/LastRefreshChip';
+import { ENABLE_ML_PREDICTIONS } from '../config/features';
+import { usePredictionMeta } from '../hooks/usePredictionMeta';
+import type {
+  DonorRetentionPrediction,
+  IncidentRiskPrediction,
+  ResidentProgressPrediction,
+  SocialDonationPrediction,
+} from '../types/predictions';
 
 export default function AdminDashboard() {
   const [residentCount, setResidentCount] = useState<number | null>(null);
   const [supporterCount, setSupporterCount] = useState<number | null>(null);
   const [donationTotal, setDonationTotal] = useState<number | null>(null);
   const [safehouseCount, setSafehouseCount] = useState<number | null>(null);
+  const [highLapseCount, setHighLapseCount] = useState<number | null>(null);
+  const [highResidentRiskCount, setHighResidentRiskCount] = useState<number | null>(null);
+  const [highIncidentRiskCount, setHighIncidentRiskCount] = useState<number | null>(null);
+  const [topSocialAvgValue, setTopSocialAvgValue] = useState<number | null>(null);
+  const donorMeta = usePredictionMeta('/DonorRetentionPredictions/meta/latest', ENABLE_ML_PREDICTIONS);
+  const residentMeta = usePredictionMeta('/ResidentProgressPredictions/meta/latest', ENABLE_ML_PREDICTIONS);
+  const incidentMeta = usePredictionMeta('/IncidentRiskPredictions/meta/latest', ENABLE_ML_PREDICTIONS);
+  const socialMeta = usePredictionMeta('/SocialDonationPredictions/meta/latest', ENABLE_ML_PREDICTIONS);
 
   useEffect(() => {
     apiClient.get('/Residents').then(r => setResidentCount(r.data.length));
@@ -18,6 +35,27 @@ export default function AdminDashboard() {
       setDonationTotal(total);
     });
     apiClient.get('/Safehouses').then(r => setSafehouseCount(r.data.length));
+    if (ENABLE_ML_PREDICTIONS) {
+      apiClient.get<DonorRetentionPrediction[]>('/DonorRetentionPredictions', { params: { take: 2000, latestOnly: true } })
+        .then(r => setHighLapseCount(r.data.filter(x => x.lapseRiskProbability >= 0.66).length))
+        .catch(() => setHighLapseCount(null));
+      apiClient.get<ResidentProgressPrediction[]>('/ResidentProgressPredictions', { params: { take: 2000, latestOnly: true } })
+        .then(r => setHighResidentRiskCount(r.data.filter(x => x.lowProgressRiskProbability >= 0.66).length))
+        .catch(() => setHighResidentRiskCount(null));
+      apiClient.get<IncidentRiskPrediction[]>('/IncidentRiskPredictions', { params: { take: 2000, latestOnly: true } })
+        .then(r => setHighIncidentRiskCount(r.data.filter(x => x.incidentRiskProbability >= 0.66).length))
+        .catch(() => setHighIncidentRiskCount(null));
+      apiClient.get<SocialDonationPrediction[]>('/SocialDonationPredictions', { params: { take: 50, latestOnly: true, sort: 'value_desc' } })
+        .then(r => {
+          if (!r.data.length) {
+            setTopSocialAvgValue(0);
+            return;
+          }
+          const avg = r.data.reduce((sum, p) => sum + p.predictedDonationValuePhp, 0) / r.data.length;
+          setTopSocialAvgValue(avg);
+        })
+        .catch(() => setTopSocialAvgValue(null));
+    }
   }, []);
 
   const fmt = (val: number | null) => val === null ? '...' : val.toLocaleString();
@@ -46,7 +84,43 @@ export default function AdminDashboard() {
           <div className="metric-value">{fmt(safehouseCount)}</div>
           <div className="metric-label">Active Safehouses</div>
         </div>
+        {ENABLE_ML_PREDICTIONS && (
+          <>
+            <div className="metric-card">
+              <div className="metric-value">{fmt(highLapseCount)}</div>
+              <div className="metric-label">High Donor Lapse Risk</div>
+            </div>
+            <div className="metric-card">
+              <div className="metric-value">{fmt(highResidentRiskCount)}</div>
+              <div className="metric-label">High Low-Progress Risk</div>
+            </div>
+            <div className="metric-card">
+              <div className="metric-value">{fmt(highIncidentRiskCount)}</div>
+              <div className="metric-label">High Incident Risk</div>
+            </div>
+            <div className="metric-card">
+              <div className="metric-value">
+                {topSocialAvgValue === null
+                  ? '...'
+                  : `₱${topSocialAvgValue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
+              </div>
+              <div className="metric-label">Avg Predicted Social Donation Value</div>
+            </div>
+          </>
+        )}
       </div>
+
+      {ENABLE_ML_PREDICTIONS && (
+        <div className="admin-card">
+          <h3>Prediction Refresh Status</h3>
+          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+            <LastRefreshChip meta={donorMeta} label="Donor retention" />
+            <LastRefreshChip meta={residentMeta} label="Resident progress" />
+            <LastRefreshChip meta={incidentMeta} label="Incident risk" />
+            <LastRefreshChip meta={socialMeta} label="Social donation" />
+          </div>
+        </div>
+      )}
 
       <div className="admin-card">
         <h3>Quick Actions</h3>

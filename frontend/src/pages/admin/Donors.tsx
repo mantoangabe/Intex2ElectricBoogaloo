@@ -2,6 +2,11 @@ import { useEffect, useState } from 'react';
 import AdminLayout from '../../components/AdminLayout';
 import '../../styles/styles.css';
 import apiClient from '../../api/apiClient';
+import PredictionBadge from '../../components/PredictionBadge';
+import LastRefreshChip from '../../components/LastRefreshChip';
+import { ENABLE_ML_PREDICTIONS } from '../../config/features';
+import { usePredictionMeta } from '../../hooks/usePredictionMeta';
+import type { DonorRetentionPrediction } from '../../types/predictions';
 
 interface Supporter {
   supporterId: number;
@@ -29,12 +34,14 @@ interface Donation {
 export default function Donors() {
   const [supporters, setSupporters] = useState<Supporter[]>([]);
   const [donations, setDonations] = useState<Donation[]>([]);
+  const [predictions, setPredictions] = useState<Record<number, DonorRetentionPrediction>>({});
   const [supporterSkip, setSupporterSkip] = useState(0);
   const [donationSkip, setDonationSkip] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [supporterHasMore, setSupporterHasMore] = useState(false);
   const [donationHasMore, setDonationHasMore] = useState(false);
+  const predictionMeta = usePredictionMeta('/DonorRetentionPredictions/meta/latest', ENABLE_ML_PREDICTIONS);
 
   // Supporter modal state
   const [showSupporterModal, setShowSupporterModal] = useState(false);
@@ -83,6 +90,20 @@ export default function Donors() {
   useEffect(() => {
     fetchSupporters(0);
     fetchDonations(0);
+    if (ENABLE_ML_PREDICTIONS) {
+      apiClient
+        .get<DonorRetentionPrediction[]>('/DonorRetentionPredictions', {
+          params: { skip: 0, take: 2000, latestOnly: true, sort: 'score_desc' },
+        })
+        .then(res => {
+          const map = res.data.reduce<Record<number, DonorRetentionPrediction>>((acc, row) => {
+            acc[row.supporterId] = row;
+            return acc;
+          }, {});
+          setPredictions(map);
+        })
+        .catch(() => setPredictions({}));
+    }
   }, []);
 
   const handleShowMoreSupporters = () => {
@@ -210,28 +231,37 @@ export default function Donors() {
 
       <div className="admin-card">
         <h3>Donor List</h3>
+        {ENABLE_ML_PREDICTIONS && <LastRefreshChip meta={predictionMeta} label="Donor lapse model" />}
         <table className="admin-table">
           <thead>
             <tr>
               <th>Name</th>
               <th>Type</th>
               <th>Status</th>
+              {ENABLE_ML_PREDICTIONS && <th>Lapse Risk</th>}
+              {ENABLE_ML_PREDICTIONS && <th>Lapse Probability</th>}
               <th>Total Contributed</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {error && (
-              <tr><td colSpan={5} className="placeholder-row">{error}</td></tr>
+              <tr><td colSpan={ENABLE_ML_PREDICTIONS ? 7 : 5} className="placeholder-row">{error}</td></tr>
             )}
             {supporters.length === 0 && !error && (
-              <tr><td colSpan={5} className="placeholder-row">No donors found.</td></tr>
+              <tr><td colSpan={ENABLE_ML_PREDICTIONS ? 7 : 5} className="placeholder-row">No donors found.</td></tr>
             )}
             {supporters.map(s => (
               <tr key={s.supporterId}>
                 <td>{s.displayName}</td>
                 <td>{s.supporterType}</td>
                 <td>{s.status}</td>
+                {ENABLE_ML_PREDICTIONS && (
+                  <td>{predictions[s.supporterId] ? <PredictionBadge probability={predictions[s.supporterId].lapseRiskProbability} /> : '—'}</td>
+                )}
+                {ENABLE_ML_PREDICTIONS && (
+                  <td>{predictions[s.supporterId] ? `${(predictions[s.supporterId].lapseRiskProbability * 100).toFixed(1)}%` : '—'}</td>
+                )}
                 <td>{totalBySupporterId[s.supporterId] ? `$${totalBySupporterId[s.supporterId].toFixed(2)}` : '—'}</td>
                 <td style={{ display: 'flex', gap: '0.5rem' }}>
                   <button className="btn btn-sm btn-secondary" onClick={() => openSupporterModal(s)}>Edit</button>
