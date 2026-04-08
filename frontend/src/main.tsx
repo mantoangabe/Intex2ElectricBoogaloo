@@ -4,13 +4,16 @@ import { BrowserRouter } from 'react-router-dom'
 import './index.css'
 import App from './App.tsx'
 import { CookieConsentProvider } from './context/CookieConsentContext'
+import { AuthProvider } from './auth/AuthContext.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <CookieConsentProvider>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
-    </CookieConsentProvider>
+    <AuthProvider>
+      <CookieConsentProvider>
+        <BrowserRouter>
+          <App />
+        </BrowserRouter>
+      </CookieConsentProvider>
+    </AuthProvider>
   </StrictMode>,
 )
