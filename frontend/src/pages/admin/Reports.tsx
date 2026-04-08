@@ -4,8 +4,10 @@ import '../../styles/styles.css';
 import apiClient from '../../api/apiClient';
 import LastRefreshChip from '../../components/LastRefreshChip';
 import { ENABLE_ML_PREDICTIONS } from '../../config/features';
+import { OKR_DEFINITIONS } from '../../config/okrTargets';
 import { usePredictionMeta } from '../../hooks/usePredictionMeta';
 import type {
+  DonorRetentionPrediction,
   IncidentRiskPrediction,
   ResidentProgressPrediction,
   SocialDonationPrediction,
@@ -46,6 +48,7 @@ export default function Reports() {
   const [progressPredictions, setProgressPredictions] = useState<ResidentProgressPrediction[]>([]);
   const [incidentPredictions, setIncidentPredictions] = useState<IncidentRiskPrediction[]>([]);
   const [socialPredictions, setSocialPredictions] = useState<SocialDonationPrediction[]>([]);
+  const [donorPredictions, setDonorPredictions] = useState<DonorRetentionPrediction[]>([]);
   const progressMeta = usePredictionMeta('/ResidentProgressPredictions/meta/latest', ENABLE_ML_PREDICTIONS);
   const incidentMeta = usePredictionMeta('/IncidentRiskPredictions/meta/latest', ENABLE_ML_PREDICTIONS);
   const socialMeta = usePredictionMeta('/SocialDonationPredictions/meta/latest', ENABLE_ML_PREDICTIONS);
@@ -98,6 +101,12 @@ export default function Reports() {
         })
         .then(res => setSocialPredictions(res.data))
         .catch(() => setSocialPredictions([]));
+      apiClient
+        .get<DonorRetentionPrediction[]>('/DonorRetentionPredictions', {
+          params: { take: 1000, latestOnly: true },
+        })
+        .then(res => setDonorPredictions(res.data))
+        .catch(() => setDonorPredictions([]));
     }
   }, []);
 
@@ -180,6 +189,28 @@ export default function Reports() {
   const topSocialAvg = socialPredictions.length
     ? socialPredictions.reduce((sum, p) => sum + p.predictedDonationValuePhp, 0) / socialPredictions.length
     : 0;
+  const highLapseCount = donorPredictions.filter(p => p.lapseRiskProbability >= 0.66).length;
+  const okrActuals = {
+    highLapseCount,
+    highLowProgressCount: highProgressRisk,
+    highIncidentCount: highIncidentRisk,
+    avgPredictedDonationUsd: topSocialAvg,
+  };
+  const fmtMetric = (value: number, unit: 'count' | 'usd') =>
+    unit === 'usd'
+      ? fmtUsd(value)
+      : value.toLocaleString();
+  const okrRows = OKR_DEFINITIONS.map(def => {
+    const actual = okrActuals[def.metricKey];
+    const ratio =
+      def.direction === 'higher'
+        ? actual / Math.max(def.target, 1e-9)
+        : def.target / Math.max(actual, 1e-9);
+    const progress = Math.max(0, Math.min(1.2, ratio));
+    const variance = def.direction === 'higher' ? actual - def.target : def.target - actual;
+    const status = progress >= 1 ? 'On Track' : progress >= 0.85 ? 'Watch' : 'At Risk';
+    return { ...def, actual, progress, variance, status };
+  });
   const draftScore = (() => {
     let score = 45;
     if (draftPlatform === 'Facebook') score += 6;
@@ -319,6 +350,64 @@ export default function Reports() {
 
       {ENABLE_ML_PREDICTIONS && (
         <>
+          <div className="admin-card">
+            <h3>OKR Tracker (Target vs Actual)</h3>
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Objective</th>
+                  <th>Key Result</th>
+                  <th>Owner</th>
+                  <th>Period</th>
+                  <th>Baseline</th>
+                  <th>Target</th>
+                  <th>Actual</th>
+                  <th>Variance</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {okrRows.map(row => (
+                  <tr key={row.id}>
+                    <td>{row.objective}</td>
+                    <td>{row.keyResult}</td>
+                    <td>{row.owner}</td>
+                    <td>{row.period}</td>
+                    <td>{fmtMetric(row.baseline, row.unit)}</td>
+                    <td>{fmtMetric(row.target, row.unit)}</td>
+                    <td>{fmtMetric(row.actual, row.unit)}</td>
+                    <td>{row.unit === 'usd' ? fmtUsd(row.variance) : row.variance.toLocaleString()}</td>
+                    <td>
+                      <span
+                        style={{
+                          display: 'inline-block',
+                          minWidth: 72,
+                          textAlign: 'center',
+                          borderRadius: 999,
+                          padding: '0.15rem 0.45rem',
+                          background:
+                            row.status === 'On Track' ? '#dcfce7' :
+                            row.status === 'Watch' ? '#fef9c3' :
+                            '#fee2e2',
+                          color:
+                            row.status === 'On Track' ? '#166534' :
+                            row.status === 'Watch' ? '#713f12' :
+                            '#7f1d1d',
+                          fontWeight: 700,
+                        }}
+                      >
+                        {row.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div style={{ marginTop: '0.75rem', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+              OKR note: values are tied to current scored batches; targets/baselines are configurable for leadership planning.
+            </div>
+          </div>
+
           <div className="admin-card">
             <h3>Executive Prediction Snapshot</h3>
             <table className="admin-table">
