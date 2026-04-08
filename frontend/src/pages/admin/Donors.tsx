@@ -38,6 +38,7 @@ export default function Donors() {
   const [predictions, setPredictions] = useState<Record<number, DonorRetentionPrediction>>({});
   const [reachOutFilter, setReachOutFilter] = useState<'all' | 'yes' | 'no'>('all');
   const [supporterSort, setSupporterSort] = useState<{ key: string; dir: 'asc' | 'desc' }>({ key: 'displayName', dir: 'asc' });
+  const [donationSort, setDonationSort] = useState<{ key: string; dir: 'asc' | 'desc' }>({ key: 'donationDate', dir: 'desc' });
   const [supporterPage, setSupporterPage] = useState(1);
   const [supporterPageSize, setSupporterPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [supporterTotalCount, setSupporterTotalCount] = useState(0);
@@ -64,6 +65,7 @@ export default function Donors() {
   const [editDonation, setEditDonation] = useState<Donation | null>(null);
   const [donationFormData, setDonationFormData] = useState<Partial<Donation>>({});
   const [savingDonation, setSavingDonation] = useState(false);
+  const [donationTypeFilter, setDonationTypeFilter] = useState('all');
 
   const fetchSupporters = (page: number, pageSize: number) => {
     setLoading(true);
@@ -220,6 +222,22 @@ export default function Donors() {
     });
   const toggleSupporterSort = (key: string) =>
     setSupporterSort(prev => ({ key, dir: prev.key === key && prev.dir === 'asc' ? 'desc' : 'asc' }));
+  const toggleDonationSort = (key: string) =>
+    setDonationSort(prev => ({ key, dir: prev.key === key && prev.dir === 'asc' ? 'desc' : 'asc' }));
+  const donationRows = donations
+    .filter(d => donationTypeFilter === 'all' || d.donationType === donationTypeFilter)
+    .sort((a, b) => {
+      const dir = donationSort.dir === 'asc' ? 1 : -1;
+      if (donationSort.key === 'amount') {
+        const av = a.amount ?? a.estimatedValue ?? 0;
+        const bv = b.amount ?? b.estimatedValue ?? 0;
+        return (av - bv) * dir;
+      }
+      if (donationSort.key === 'donationDate') {
+        return (new Date(a.donationDate).getTime() - new Date(b.donationDate).getTime()) * dir;
+      }
+      return String((a as any)[donationSort.key] ?? '').localeCompare(String((b as any)[donationSort.key] ?? '')) * dir;
+    });
 
   return (
     <AdminLayout title="Donors & Contributions">
@@ -273,13 +291,13 @@ export default function Donors() {
         <table className="admin-table">
           <thead>
             <tr>
-              <th className="clickable-th" onClick={() => toggleSupporterSort('displayName')}>Name</th>
-              <th className="clickable-th" onClick={() => toggleSupporterSort('supporterType')}>Type</th>
-              <th className="clickable-th" onClick={() => toggleSupporterSort('status')}>Status</th>
-              {ENABLE_ML_PREDICTIONS && <th className="table-center clickable-th" onClick={() => toggleSupporterSort('lapseRiskProbability')}>Lapse Risk</th>}
-              {ENABLE_ML_PREDICTIONS && <th className="clickable-th" onClick={() => toggleSupporterSort('lapseRiskProbability')}>Lapse Probability</th>}
-              {ENABLE_ML_PREDICTIONS && <th className="clickable-th" onClick={() => toggleSupporterSort('lapseRiskProbability')}>Reach Out</th>}
-              <th className="clickable-th" onClick={() => toggleSupporterSort('displayName')}>Total Contributed</th>
+              <th className="clickable-th" onClick={() => toggleSupporterSort('displayName')}>Name {supporterSort.key === 'displayName' ? (supporterSort.dir === 'asc' ? '▲' : '▼') : '↕'}</th>
+              <th className="clickable-th" onClick={() => toggleSupporterSort('supporterType')}>Type {supporterSort.key === 'supporterType' ? (supporterSort.dir === 'asc' ? '▲' : '▼') : '↕'}</th>
+              <th className="clickable-th" onClick={() => toggleSupporterSort('status')}>Status {supporterSort.key === 'status' ? (supporterSort.dir === 'asc' ? '▲' : '▼') : '↕'}</th>
+              {ENABLE_ML_PREDICTIONS && <th className="table-center clickable-th" onClick={() => toggleSupporterSort('lapseRiskProbability')}>Lapse Risk {supporterSort.key === 'lapseRiskProbability' ? (supporterSort.dir === 'asc' ? '▲' : '▼') : '↕'}</th>}
+              {ENABLE_ML_PREDICTIONS && <th className="clickable-th" onClick={() => toggleSupporterSort('lapseRiskProbability')}>Lapse Probability {supporterSort.key === 'lapseRiskProbability' ? (supporterSort.dir === 'asc' ? '▲' : '▼') : '↕'}</th>}
+              {ENABLE_ML_PREDICTIONS && <th className="clickable-th" onClick={() => toggleSupporterSort('lapseRiskProbability')}>Reach Out {supporterSort.key === 'lapseRiskProbability' ? (supporterSort.dir === 'asc' ? '▲' : '▼') : '↕'}</th>}
+              <th>Total Contributed</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -331,7 +349,7 @@ export default function Donors() {
             setSupporterPage(p);
             fetchSupporters(p, supporterPageSize);
           }}>Go</button>
-          <select className="filter-select" value={supporterPageSize} onChange={(e) => {
+          <select className="filter-select" style={{ marginLeft: 'auto' }} value={supporterPageSize} onChange={(e) => {
             const size = Number(e.target.value);
             setSupporterPageSize(size);
             setSupporterPage(1);
@@ -355,6 +373,10 @@ export default function Donors() {
       {activeSection === 'donations' && <div className="admin-card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
           <h3 style={{ margin: 0 }}>Donation Allocation</h3>
+          <select className="filter-select" value={donationTypeFilter} onChange={(e) => setDonationTypeFilter(e.target.value)}>
+            <option value="all">All Types</option>
+            {[...new Set(donations.map(d => d.donationType).filter(Boolean))].map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
           <button className="btn btn-primary btn-sm" onClick={() => openDonationModal(null)}>+ Add Donation</button>
         </div>
         <table className="admin-table">
@@ -362,17 +384,17 @@ export default function Donors() {
             <tr>
               <th>Donation ID</th>
               <th>Supporter ID</th>
-              <th>Type</th>
-              <th>Date</th>
-              <th>Amount</th>
+              <th className="clickable-th" onClick={() => toggleDonationSort('donationType')}>Type {donationSort.key === 'donationType' ? (donationSort.dir === 'asc' ? '▲' : '▼') : '↕'}</th>
+              <th className="clickable-th" onClick={() => toggleDonationSort('donationDate')}>Date {donationSort.key === 'donationDate' ? (donationSort.dir === 'asc' ? '▲' : '▼') : '↕'}</th>
+              <th className="clickable-th" onClick={() => toggleDonationSort('amount')}>Amount {donationSort.key === 'amount' ? (donationSort.dir === 'asc' ? '▲' : '▼') : '↕'}</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {donations.length === 0 && !error && (
+            {donationRows.length === 0 && !error && (
               <tr><td colSpan={5} className="placeholder-row">No donations recorded.</td></tr>
             )}
-            {donations.map(d => (
+            {donationRows.map(d => (
               <tr key={d.donationId}>
                 <td>{d.donationId}</td>
                 <td>{d.supporterId}</td>
@@ -398,7 +420,7 @@ export default function Donors() {
             setDonationPage(p);
             fetchDonations(p, donationPageSize);
           }}>Go</button>
-          <select className="filter-select" value={donationPageSize} onChange={(e) => {
+          <select className="filter-select" style={{ marginLeft: 'auto' }} value={donationPageSize} onChange={(e) => {
             const size = Number(e.target.value);
             setDonationPageSize(size);
             setDonationPage(1);

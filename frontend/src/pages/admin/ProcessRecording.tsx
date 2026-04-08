@@ -28,7 +28,8 @@ export default function ProcessRecording() {
   const [totalCount, setTotalCount] = useState(0);
   const [jumpPage, setJumpPage] = useState('1');
   const [sortConfig, setSortConfig] = useState<{ key: keyof ProcessRecording; dir: 'asc' | 'desc' }>({ key: 'sessionDate', dir: 'desc' });
-  const sortedRecordings = [...recordings].sort((a, b) => {
+  const [followUpFilter, setFollowUpFilter] = useState('all');
+  const sortedRecordings = recordings.filter(r => followUpFilter === 'all' || r.followUpActions === followUpFilter).sort((a, b) => {
     const dir = sortConfig.dir === 'asc' ? 1 : -1;
     return String(a[sortConfig.key] ?? '').localeCompare(String(b[sortConfig.key] ?? '')) * dir;
   });
@@ -114,6 +115,10 @@ export default function ProcessRecording() {
         <select className="filter-select">
           <option>Select Resident...</option>
         </select>
+        <select className="filter-select" value={followUpFilter} onChange={(e) => setFollowUpFilter(e.target.value)}>
+          <option value="all">All Follow-up Types</option>
+          {[...new Set(recordings.map(r => r.followUpActions).filter(Boolean))].map(v => <option key={v} value={v}>{v}</option>)}
+        </select>
         <input type="date" className="filter-input" placeholder="From date" />
         <input type="date" className="filter-input" placeholder="To date" />
       </div>
@@ -123,10 +128,10 @@ export default function ProcessRecording() {
         <table className="admin-table">
           <thead>
             <tr>
-              <th className="clickable-th" onClick={() => toggleSort('sessionDate')}>Date</th>
-              <th className="clickable-th" onClick={() => toggleSort('residentId')}>Resident ID</th>
-              <th className="clickable-th" onClick={() => toggleSort('socialWorker')}>Social Worker</th>
-              <th className="clickable-th" onClick={() => toggleSort('sessionType')}>Session Type</th>
+              <th className="clickable-th" onClick={() => toggleSort('sessionDate')}>Date {sortConfig.key === 'sessionDate' ? (sortConfig.dir === 'asc' ? '▲' : '▼') : '↕'}</th>
+              <th className="clickable-th" onClick={() => toggleSort('residentId')}>Resident ID {sortConfig.key === 'residentId' ? (sortConfig.dir === 'asc' ? '▲' : '▼') : '↕'}</th>
+              <th className="clickable-th" onClick={() => toggleSort('socialWorker')}>Social Worker {sortConfig.key === 'socialWorker' ? (sortConfig.dir === 'asc' ? '▲' : '▼') : '↕'}</th>
+              <th className="clickable-th" onClick={() => toggleSort('sessionType')}>Session Type {sortConfig.key === 'sessionType' ? (sortConfig.dir === 'asc' ? '▲' : '▼') : '↕'}</th>
               <th>Emotional State</th>
               <th>Follow-up</th>
               <th>Actions</th>
@@ -167,7 +172,7 @@ export default function ProcessRecording() {
             setPage(p);
             fetchRecordings(p, pageSize);
           }}>Go</button>
-          <select className="filter-select" value={pageSize} onChange={(e) => {
+          <select className="filter-select" style={{ marginLeft: 'auto' }} value={pageSize} onChange={(e) => {
             const size = Number(e.target.value);
             setPageSize(size);
             setPage(1);
