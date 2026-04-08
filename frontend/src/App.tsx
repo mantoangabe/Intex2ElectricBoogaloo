@@ -14,6 +14,7 @@ import CaseloadInventory from './pages/admin/CaseloadInventory';
 import ProcessRecording from './pages/admin/ProcessRecording';
 import HomeVisits from './pages/admin/HomeVisits';
 import Reports from './pages/admin/Reports';
+import RequireAdmin from './components/RequireAdmin';
 
 function App() {
   return (
@@ -26,12 +27,12 @@ function App() {
       <Route path="/privacy" element={<PrivacyPolicy />} />
 
       {/* Admin pages */}
-      <Route path="/admin/dashboard" element={<AdminDashboard />} />
-      <Route path="/admin/donors" element={<Donors />} />
-      <Route path="/admin/caseload" element={<CaseloadInventory />} />
-      <Route path="/admin/process-recording" element={<ProcessRecording />} />
-      <Route path="/admin/home-visits" element={<HomeVisits />} />
-      <Route path="/admin/reports" element={<Reports />} />
+      <Route path="/admin/dashboard" element={<RequireAdmin><AdminDashboard /></RequireAdmin>} />
+      <Route path="/admin/donors" element={<RequireAdmin><Donors /></RequireAdmin>} />
+      <Route path="/admin/caseload" element={<RequireAdmin><CaseloadInventory /></RequireAdmin>} />
+      <Route path="/admin/process-recording" element={<RequireAdmin><ProcessRecording /></RequireAdmin>} />
+      <Route path="/admin/home-visits" element={<RequireAdmin><HomeVisits /></RequireAdmin>} />
+      <Route path="/admin/reports" element={<RequireAdmin><Reports /></RequireAdmin>} />
 
       {/* Fallback */}
       <Route path="*" element={<Navigate to="/" />} />

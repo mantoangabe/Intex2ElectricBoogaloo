@@ -1,11 +1,11 @@
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../auth/AuthContext';
 import '../styles/Navbar.css';
 
-const navLinks = [
+const publicNavLinks = [
   { label: 'Home', path: '/' },
   { label: 'Impact', path: '/donor' },
   { label: 'Donate', path: '/donor/dashboard' },
-  { label: 'Admin', path: '/admin/dashboard' },
 ];
 
 interface NavbarProps {
@@ -15,9 +15,17 @@ interface NavbarProps {
 export default function Navbar({ title }: NavbarProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  const isAdmin = title !== undefined;
+  const { isAdmin, isAuthenticated, logout } = useAuth();
+  const isAdminLayout = title !== undefined;
 
-  if (isAdmin) {
+  const navLinks = isAdmin ? [...publicNavLinks, { label: 'Admin', path: '/admin/dashboard' }] : publicNavLinks;
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/');
+  };
+
+  if (isAdminLayout) {
     return (
       <header className="admin-header">
         <h1 style={{ margin: 0, fontSize: '1.2rem' }}>{title}</h1>
@@ -36,7 +44,7 @@ export default function Navbar({ title }: NavbarProps) {
               {link.label}
             </a>
           ))}
-          <button className="logout-btn" onClick={() => navigate('/')}>Logout</button>
+          <button className="logout-btn" onClick={handleLogout}>Logout</button>
         </div>
       </header>
     );
@@ -60,9 +68,15 @@ export default function Navbar({ title }: NavbarProps) {
             {link.label}
           </a>
         ))}
-        <button className="btn btn-primary" style={{ padding: '0.5rem 1rem' }} onClick={() => navigate('/login')}>
-          Staff Login
-        </button>
+        {isAuthenticated ? (
+          <button className="btn btn-primary" style={{ padding: '0.5rem 1rem' }} onClick={handleLogout}>
+            Logout
+          </button>
+        ) : (
+          <button className="btn btn-primary" style={{ padding: '0.5rem 1rem' }} onClick={() => navigate('/login')}>
+            Staff Login
+          </button>
+        )}
       </div>
     </nav>
   );

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import apiClient from '../api/apiClient';
+import { useAuth } from '../auth/AuthContext';
 import '../styles/LoginPage.css';
 
 export default function LoginPage() {
@@ -10,6 +10,7 @@ export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,10 +23,12 @@ export default function LoginPage() {
 
     try {
       setIsSubmitting(true);
-      await apiClient.post('/Auth/login', {
-        email: email.trim(),
-        password,
-      });
+      const user = await login(email.trim(), password);
+
+      if (user.roleId !== 2) {
+        setError('Your account is not an admin account (roleId must be 2).');
+        return;
+      }
 
       navigate('/admin/dashboard');
     } catch (err: unknown) {
