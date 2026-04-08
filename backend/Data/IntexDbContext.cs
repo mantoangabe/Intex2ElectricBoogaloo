@@ -1,9 +1,10 @@
 using backend.Models;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace backend.Data;
 
-public class IntexDbContext : DbContext
+public class IntexDbContext : IdentityDbContext<ApplicationUser>
 {
     public IntexDbContext(DbContextOptions<IntexDbContext> options)
         : base(options)
