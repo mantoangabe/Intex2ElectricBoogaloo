@@ -54,6 +54,12 @@ export default function Reports() {
   const [editMetric, setEditMetric] = useState<SafehouseMonthlyMetric | null>(null);
   const [formData, setFormData] = useState<Partial<SafehouseMonthlyMetric>>({});
   const [saving, setSaving] = useState(false);
+  const [draftPlatform, setDraftPlatform] = useState('Facebook');
+  const [draftPostType, setDraftPostType] = useState('FundraisingAppeal');
+  const [draftHasCta, setDraftHasCta] = useState(true);
+  const [draftUrgency, setDraftUrgency] = useState(false);
+  const [draftImpactStory, setDraftImpactStory] = useState(true);
+  const [draftWordCount, setDraftWordCount] = useState(120);
 
   const fetchMetrics = (pageVal: number, size: number) => {
     setLoading(true);
@@ -101,8 +107,13 @@ export default function Reports() {
     if (prob == null) return undefined;
     const pct = prob * 100;
     const clamped = Math.max(0, Math.min(100, pct));
-    const hue = Math.round((clamped / 100) * 120);
-    const light = Math.round(95 - (clamped / 100) * 18);
+    const bucketStart = clamped < 50 ? 0 : clamped < 70 ? 50 : clamped < 81 ? 70 : 81;
+    const bucketEnd = clamped < 50 ? 50 : clamped < 70 ? 70 : clamped < 81 ? 81 : 100;
+    const t = (clamped - bucketStart) / Math.max(1, bucketEnd - bucketStart);
+    const hueStart = clamped < 50 ? 0 : clamped < 70 ? 42 : clamped < 81 ? 92 : 118;
+    const hueEnd = clamped < 50 ? 12 : clamped < 70 ? 60 : clamped < 81 ? 108 : 125;
+    const hue = Math.round(hueStart + (hueEnd - hueStart) * t);
+    const light = Math.round(94 - 18 * t);
     return {
       backgroundColor: `hsl(${hue} 85% ${light}%)`,
       color: `hsl(${hue} 70% 20%)`,
@@ -169,6 +180,26 @@ export default function Reports() {
   const topSocialAvg = socialPredictions.length
     ? socialPredictions.reduce((sum, p) => sum + p.predictedDonationValuePhp, 0) / socialPredictions.length
     : 0;
+  const draftScore = (() => {
+    let score = 45;
+    if (draftPlatform === 'Facebook') score += 6;
+    if (draftPlatform === 'Instagram') score += 8;
+    if (draftPostType === 'FundraisingAppeal') score += 12;
+    if (draftHasCta) score += 10;
+    if (draftUrgency) score += 8;
+    if (draftImpactStory) score += 10;
+    if (draftWordCount >= 80 && draftWordCount <= 220) score += 8;
+    if (draftWordCount < 40 || draftWordCount > 320) score -= 7;
+    return Math.max(0, Math.min(100, score));
+  })();
+  const draftTier = draftScore >= 80 ? 'High potential' : draftScore >= 60 ? 'Moderate potential' : 'Needs revision';
+  const draftActions = [
+    !draftHasCta ? 'Add a direct donation CTA with a clear next step.' : 'Keep CTA prominent in the first 2 lines.',
+    !draftImpactStory ? 'Include a concise resident impact story to increase emotional resonance.' : 'Keep the impact story concrete with one measurable outcome.',
+    draftWordCount < 80 || draftWordCount > 220
+      ? 'Aim for approximately 80-220 words for best readability and donation intent.'
+      : 'Current length is within a strong range for donation posts.',
+  ];
   const sortedMetrics = [...metrics].sort((a, b) =>
     metricSortDir === 'asc' ? a.safehouseId - b.safehouseId : b.safehouseId - a.safehouseId
   );
@@ -312,6 +343,10 @@ export default function Reports() {
                 </tr>
               </tbody>
             </table>
+            <div style={{ marginTop: '0.75rem', fontSize: '0.84rem', color: 'var(--text-muted)' }}>
+              <div><strong>So what:</strong> High-risk resident counts indicate likely near-term intervention load for case teams.</div>
+              <div><strong>Opportunity:</strong> Social content in the top predicted band suggests near-term fundraising upside.</div>
+            </div>
             <div style={{ display: 'flex', gap: '0.35rem', marginTop: '0.75rem', flexDirection: 'column' }}>
               <LastRefreshChip meta={progressMeta} label="Progress" />
               <LastRefreshChip meta={incidentMeta} label="Incident" />
@@ -346,8 +381,53 @@ export default function Reports() {
                 )}
               </tbody>
             </table>
+            <div style={{ marginTop: '0.75rem', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+              Conversion color legend: &lt;50% red, 50-69% yellow, 70-80% light green, 81%+ green. Shade varies within each band.
+            </div>
           </div>
         </>
+      )}
+
+      {ENABLE_ML_PREDICTIONS && (
+        <div className="admin-card">
+          <h3>Post Draft Scorer (Planning Heuristic)</h3>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+            Frontend planning aid for campaign drafting. This is not direct model inference.
+          </p>
+          <div className="form-row">
+            <div className="form-group">
+              <label>Platform</label>
+              <select value={draftPlatform} onChange={(e) => setDraftPlatform(e.target.value)}>
+                <option>Facebook</option>
+                <option>Instagram</option>
+                <option>WhatsApp</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Post Type</label>
+              <select value={draftPostType} onChange={(e) => setDraftPostType(e.target.value)}>
+                <option>FundraisingAppeal</option>
+                <option>Awareness</option>
+                <option>Update</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Caption Word Count</label>
+              <input type="number" value={draftWordCount} onChange={(e) => setDraftWordCount(Number(e.target.value) || 0)} />
+            </div>
+          </div>
+          <div className="form-row">
+            <label><input type="checkbox" checked={draftHasCta} onChange={(e) => setDraftHasCta(e.target.checked)} /> Has donation CTA</label>
+            <label><input type="checkbox" checked={draftUrgency} onChange={(e) => setDraftUrgency(e.target.checked)} /> Uses urgency language</label>
+            <label><input type="checkbox" checked={draftImpactStory} onChange={(e) => setDraftImpactStory(e.target.checked)} /> Includes impact story</label>
+          </div>
+          <div style={{ marginTop: '0.9rem' }}>
+            <strong>Estimated Donation Potential:</strong> {draftTier} ({draftScore}/100)
+            <ul style={{ marginTop: '0.5rem' }}>
+              {draftActions.map(a => <li key={a}>{a}</li>)}
+            </ul>
+          </div>
+        </div>
       )}
 
       {/* Metric Modal */}
