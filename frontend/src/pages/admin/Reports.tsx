@@ -2,6 +2,14 @@ import { useEffect, useState } from 'react';
 import AdminLayout from '../../components/AdminLayout';
 import '../../styles/styles.css';
 import apiClient from '../../api/apiClient';
+import LastRefreshChip from '../../components/LastRefreshChip';
+import { ENABLE_ML_PREDICTIONS } from '../../config/features';
+import { usePredictionMeta } from '../../hooks/usePredictionMeta';
+import type {
+  IncidentRiskPrediction,
+  ResidentProgressPrediction,
+  SocialDonationPrediction,
+} from '../../types/predictions';
 
 interface SafehouseMonthlyMetric {
   metricId: number;
@@ -29,6 +37,12 @@ export default function Reports() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
+  const [progressPredictions, setProgressPredictions] = useState<ResidentProgressPrediction[]>([]);
+  const [incidentPredictions, setIncidentPredictions] = useState<IncidentRiskPrediction[]>([]);
+  const [socialPredictions, setSocialPredictions] = useState<SocialDonationPrediction[]>([]);
+  const progressMeta = usePredictionMeta('/ResidentProgressPredictions/meta/latest', ENABLE_ML_PREDICTIONS);
+  const incidentMeta = usePredictionMeta('/IncidentRiskPredictions/meta/latest', ENABLE_ML_PREDICTIONS);
+  const socialMeta = usePredictionMeta('/SocialDonationPredictions/meta/latest', ENABLE_ML_PREDICTIONS);
 
   const [showModal, setShowModal] = useState(false);
   const [editMetric, setEditMetric] = useState<SafehouseMonthlyMetric | null>(null);
@@ -56,6 +70,22 @@ export default function Reports() {
       .then(res => setResidents(res.data))
       .catch(() => {});
     fetchMetrics(0);
+    if (ENABLE_ML_PREDICTIONS) {
+      apiClient
+        .get<ResidentProgressPrediction[]>('/ResidentProgressPredictions', { params: { take: 1000, latestOnly: true } })
+        .then(res => setProgressPredictions(res.data))
+        .catch(() => setProgressPredictions([]));
+      apiClient
+        .get<IncidentRiskPrediction[]>('/IncidentRiskPredictions', { params: { take: 1000, latestOnly: true } })
+        .then(res => setIncidentPredictions(res.data))
+        .catch(() => setIncidentPredictions([]));
+      apiClient
+        .get<SocialDonationPrediction[]>('/SocialDonationPredictions', {
+          params: { take: 25, latestOnly: true, sort: 'value_desc' },
+        })
+        .then(res => setSocialPredictions(res.data))
+        .catch(() => setSocialPredictions([]));
+    }
   }, []);
 
   const handleShowMore = () => {
@@ -115,6 +145,11 @@ export default function Reports() {
   const reintegrationRate = residents.length
     ? ((residents.filter(r => r.reintegrationStatus === 'Completed').length / residents.length) * 100).toFixed(1) + '%'
     : '—';
+  const highProgressRisk = progressPredictions.filter(p => p.lowProgressRiskProbability >= 0.66).length;
+  const highIncidentRisk = incidentPredictions.filter(p => p.incidentRiskProbability >= 0.66).length;
+  const topSocialAvg = socialPredictions.length
+    ? (socialPredictions.reduce((sum, p) => sum + p.predictedDonationValuePhp, 0) / socialPredictions.length).toFixed(2)
+    : '0.00';
 
   return (
     <AdminLayout title="Reports & Analytics">
@@ -203,6 +238,66 @@ export default function Reports() {
           </tbody>
         </table>
       </div>
+
+      {ENABLE_ML_PREDICTIONS && (
+        <>
+          <div className="admin-card">
+            <h3>Executive Prediction Snapshot</h3>
+            <div style={{ display: 'flex', gap: '1rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
+              <LastRefreshChip meta={progressMeta} label="Progress" />
+              <LastRefreshChip meta={incidentMeta} label="Incident" />
+              <LastRefreshChip meta={socialMeta} label="Social donation" />
+            </div>
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Signal</th>
+                  <th>Value</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Residents in High low-progress risk band</td>
+                  <td>{highProgressRisk}</td>
+                </tr>
+                <tr>
+                  <td>Residents in High incident risk band</td>
+                  <td>{highIncidentRisk}</td>
+                </tr>
+                <tr>
+                  <td>Top social posts avg predicted donation value (PHP)</td>
+                  <td>{topSocialAvg}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div className="admin-card">
+            <h3>Top Predicted Social Donation Posts</h3>
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Post ID</th>
+                  <th>Predicted Donation Value (PHP)</th>
+                  <th>High Conversion Probability</th>
+                </tr>
+              </thead>
+              <tbody>
+                {socialPredictions.slice(0, 10).map(post => (
+                  <tr key={post.predictionId}>
+                    <td>{post.postId}</td>
+                    <td>{post.predictedDonationValuePhp.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
+                    <td>{post.pHighConversion != null ? `${(post.pHighConversion * 100).toFixed(1)}%` : '—'}</td>
+                  </tr>
+                ))}
+                {socialPredictions.length === 0 && (
+                  <tr><td colSpan={3} className="placeholder-row">No scored social predictions available.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
 
       {/* Metric Modal */}
       {showModal && (

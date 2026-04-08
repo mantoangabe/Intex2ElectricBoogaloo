@@ -61,6 +61,9 @@ var app = builder.Build();
 // Seed database with roles
 using (var scope = app.Services.CreateScope())
 {
+    var db = scope.ServiceProvider.GetRequiredService<IntexDbContext>();
+    await db.Database.MigrateAsync();
+
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
     var roles = new[] { "Admin", "Donor" };
     
@@ -71,6 +74,8 @@ using (var scope = app.Services.CreateScope())
             await roleManager.CreateAsync(new IdentityRole(role));
         }
     }
+
+    await PredictionSeedService.SeedAsync(db);
 }
 
 if (app.Environment.IsDevelopment())

@@ -2,6 +2,11 @@ import { useEffect, useState } from 'react';
 import AdminLayout from '../../components/AdminLayout';
 import '../../styles/styles.css';
 import apiClient from '../../api/apiClient';
+import PredictionBadge from '../../components/PredictionBadge';
+import LastRefreshChip from '../../components/LastRefreshChip';
+import { ENABLE_ML_PREDICTIONS } from '../../config/features';
+import { usePredictionMeta } from '../../hooks/usePredictionMeta';
+import type { IncidentRiskPrediction, ResidentProgressPrediction } from '../../types/predictions';
 
 interface Resident {
   residentId: number;
@@ -22,10 +27,14 @@ interface Resident {
 
 export default function CaseloadInventory() {
   const [residents, setResidents] = useState<Resident[]>([]);
+  const [progressPredictions, setProgressPredictions] = useState<Record<number, ResidentProgressPrediction>>({});
+  const [incidentPredictions, setIncidentPredictions] = useState<Record<number, IncidentRiskPrediction>>({});
   const [skip, setSkip] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
+  const progressMeta = usePredictionMeta('/ResidentProgressPredictions/meta/latest', ENABLE_ML_PREDICTIONS);
+  const incidentMeta = usePredictionMeta('/IncidentRiskPredictions/meta/latest', ENABLE_ML_PREDICTIONS);
 
   const [showModal, setShowModal] = useState(false);
   const [editResident, setEditResident] = useState<Resident | null>(null);
@@ -50,6 +59,33 @@ export default function CaseloadInventory() {
 
   useEffect(() => {
     fetchResidents(0);
+    if (ENABLE_ML_PREDICTIONS) {
+      apiClient
+        .get<ResidentProgressPrediction[]>('/ResidentProgressPredictions', {
+          params: { take: 2000, latestOnly: true, sort: 'score_desc' },
+        })
+        .then(res => {
+          const map = res.data.reduce<Record<number, ResidentProgressPrediction>>((acc, row) => {
+            acc[row.residentId] = row;
+            return acc;
+          }, {});
+          setProgressPredictions(map);
+        })
+        .catch(() => setProgressPredictions({}));
+
+      apiClient
+        .get<IncidentRiskPrediction[]>('/IncidentRiskPredictions', {
+          params: { take: 2000, latestOnly: true, sort: 'score_desc' },
+        })
+        .then(res => {
+          const map = res.data.reduce<Record<number, IncidentRiskPrediction>>((acc, row) => {
+            acc[row.residentId] = row;
+            return acc;
+          }, {});
+          setIncidentPredictions(map);
+        })
+        .catch(() => setIncidentPredictions({}));
+    }
   }, []);
 
   const handleShowMore = () => {
@@ -131,6 +167,12 @@ export default function CaseloadInventory() {
 
       <div className="admin-card">
         <h3>Resident Profiles</h3>
+        {ENABLE_ML_PREDICTIONS && (
+          <div style={{ display: 'flex', gap: '1rem', marginBottom: '0.75rem' }}>
+            <LastRefreshChip meta={progressMeta} label="Progress model" />
+            <LastRefreshChip meta={incidentMeta} label="Incident model" />
+          </div>
+        )}
         <table className="admin-table">
           <thead>
             <tr>
@@ -140,16 +182,18 @@ export default function CaseloadInventory() {
               <th>Case Category</th>
               <th>Safehouse</th>
               <th>Status</th>
+              {ENABLE_ML_PREDICTIONS && <th>Low Progress Risk</th>}
+              {ENABLE_ML_PREDICTIONS && <th>Incident Risk</th>}
               <th>Assigned Social Worker</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {error && (
-              <tr><td colSpan={8} className="placeholder-row">{error}</td></tr>
+              <tr><td colSpan={ENABLE_ML_PREDICTIONS ? 10 : 8} className="placeholder-row">{error}</td></tr>
             )}
             {residents.length === 0 && !error && (
-              <tr><td colSpan={8} className="placeholder-row">No residents found.</td></tr>
+              <tr><td colSpan={ENABLE_ML_PREDICTIONS ? 10 : 8} className="placeholder-row">No residents found.</td></tr>
             )}
             {residents.map(r => (
               <tr key={r.residentId}>
@@ -159,6 +203,20 @@ export default function CaseloadInventory() {
                 <td>{r.caseCategory}</td>
                 <td>{r.safehouseId}</td>
                 <td>{r.caseStatus}</td>
+                {ENABLE_ML_PREDICTIONS && (
+                  <td>
+                    {progressPredictions[r.residentId]
+                      ? <PredictionBadge probability={progressPredictions[r.residentId].lowProgressRiskProbability} />
+                      : '—'}
+                  </td>
+                )}
+                {ENABLE_ML_PREDICTIONS && (
+                  <td>
+                    {incidentPredictions[r.residentId]
+                      ? <PredictionBadge probability={incidentPredictions[r.residentId].incidentRiskProbability} />
+                      : '—'}
+                  </td>
+                )}
                 <td>{r.assignedSocialWorker}</td>
                 <td style={{ display: 'flex', gap: '0.5rem' }}>
                   <button className="btn btn-sm btn-secondary" onClick={() => openModal(r)}>Edit</button>
