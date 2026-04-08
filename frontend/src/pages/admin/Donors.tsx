@@ -287,7 +287,10 @@ export default function Donors() {
       </div>
 
       {activeSection === 'donors' && <div className="admin-card">
-        <h3>Donor List</h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h3>Donor List</h3>
+          <small className="refresh-chip">Showing {donorRows.length} of {supporterTotalCount} records</small>
+        </div>
         <table className="admin-table">
           <thead>
             <tr>
@@ -372,7 +375,10 @@ export default function Donors() {
 
       {activeSection === 'donations' && <div className="admin-card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-          <h3 style={{ margin: 0 }}>Donation Allocation</h3>
+          <div>
+            <h3 style={{ margin: 0 }}>Donation Allocation</h3>
+            <small className="refresh-chip">Showing {donationRows.length} of {donationTotalCount} records</small>
+          </div>
           <select className="filter-select" value={donationTypeFilter} onChange={(e) => setDonationTypeFilter(e.target.value)}>
             <option value="all">All Types</option>
             {[...new Set(donations.map(d => d.donationType).filter(Boolean))].map(t => <option key={t} value={t}>{t}</option>)}

@@ -124,7 +124,10 @@ export default function ProcessRecording() {
       </div>
 
       <div className="admin-card">
-        <h3>Session Records</h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h3>Session Records</h3>
+          <small className="refresh-chip">Showing {sortedRecordings.length} of {totalCount} records</small>
+        </div>
         <table className="admin-table">
           <thead>
             <tr>

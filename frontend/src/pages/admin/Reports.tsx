@@ -100,14 +100,12 @@ export default function Reports() {
   const conversionCellStyle = (prob?: number | null) => {
     if (prob == null) return undefined;
     const pct = prob * 100;
-    let bg = '#fee2e2';
-    let fg = '#7f1d1d';
-    if (pct >= 81) { bg = '#86efac'; fg = '#14532d'; }
-    else if (pct >= 70) { bg = '#dcfce7'; fg = '#166534'; }
-    else if (pct >= 50) { bg = '#fef9c3'; fg = '#713f12'; }
+    const clamped = Math.max(0, Math.min(100, pct));
+    const hue = Math.round((clamped / 100) * 120);
+    const light = Math.round(95 - (clamped / 100) * 18);
     return {
-      backgroundColor: bg,
-      color: fg,
+      backgroundColor: `hsl(${hue} 85% ${light}%)`,
+      color: `hsl(${hue} 70% 20%)`,
       fontWeight: 700 as const,
       borderRadius: '6px',
       padding: '0.2rem 0.45rem',
@@ -194,7 +192,10 @@ export default function Reports() {
       </div>
 
       <div className="admin-card">
-        <h3>Safehouse Monthly Metrics</h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h3>Safehouse Monthly Metrics</h3>
+          <small className="refresh-chip">Showing {sortedMetrics.length} of {totalCount} records</small>
+        </div>
         <table className="admin-table">
           <thead>
             <tr>
