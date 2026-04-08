@@ -1,16 +1,36 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import apiClient from '../api/apiClient';
 import '../styles/LoginPage.css';
 
 export default function LoginPage() {
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (username && password) {
+    setError('');
+
+    if (!email || !password) {
+      setError('Please enter both email and password.');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      await apiClient.post('/Auth/login', {
+        email,
+        password,
+      });
+
       navigate('/admin/dashboard');
+    } catch {
+      setError('Login failed. Check your credentials and try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -24,12 +44,12 @@ export default function LoginPage() {
 
         <form onSubmit={handleLogin}>
           <div className="form-group">
-            <label>Username</label>
+            <label>Email</label>
             <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="Enter your username"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Enter your email"
             />
           </div>
 
@@ -43,8 +63,10 @@ export default function LoginPage() {
             />
           </div>
 
-          <button type="submit" className="login-btn">
-            Sign In
+          {error && <p style={{ color: '#c62828', marginBottom: '0.75rem' }}>{error}</p>}
+
+          <button type="submit" className="login-btn" disabled={isSubmitting}>
+            {isSubmitting ? 'Signing In...' : 'Sign In'}
           </button>
         </form>
 
