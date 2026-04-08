@@ -1,16 +1,49 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import { useAuth } from '../auth/AuthContext';
 import '../styles/LoginPage.css';
 
 export default function LoginPage() {
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
   const navigate = useNavigate();
+  const { login } = useAuth();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (username && password) {
+    setError('');
+
+    if (!email || !password) {
+      setError('Please enter both email and password.');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      const user = await login(email.trim(), password);
+
+      if (user.roleId !== 2) {
+        setError('Your account is not an admin account (roleId must be 2).');
+        return;
+      }
+
       navigate('/admin/dashboard');
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        const status = err.response?.status;
+        if (status === 401) {
+          setError('Login failed. Invalid email or password.');
+        } else {
+          setError(`Login request failed (${status ?? 'network error'}).`);
+        }
+      } else {
+        setError('Login failed. Check your credentials and try again.');
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -22,14 +55,14 @@ export default function LoginPage() {
           <p>Staff & Administrator Portal</p>
         </div>
 
-        <form onSubmit={handleLogin}>
+        <form onSubmit={handleLogin} noValidate>
           <div className="form-group">
-            <label>Username</label>
+            <label>Email</label>
             <input
               type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="Enter your username"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Enter your email"
             />
           </div>
 
@@ -43,8 +76,10 @@ export default function LoginPage() {
             />
           </div>
 
-          <button type="submit" className="login-btn">
-            Sign In
+          {error && <p style={{ color: '#c62828', marginBottom: '0.75rem' }}>{error}</p>}
+
+          <button type="submit" className="login-btn" disabled={isSubmitting}>
+            {isSubmitting ? 'Signing In...' : 'Sign In'}
           </button>
         </form>
 

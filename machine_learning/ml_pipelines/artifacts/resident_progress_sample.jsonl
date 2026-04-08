@@ -1,1 +1,1 @@
-{"resident_id": 40, "as_of_date": "2025-12-01", "forecast_horizon_days": 45, "progress_risk_probability": 0.6564149881424242, "priority_tier": "High", "model_version": "resident_progress_v1", "safehouse_id": 1, "case_status": "Active"}
+{"resident_id": 40, "as_of_date": "2025-12-01", "forecast_horizon_days": 45, "low_progress_risk_probability": 0.6564149881424242, "priority_tier": "High", "model_version": "resident_progress_v1", "safehouse_id": 1, "case_status": "Active"}
