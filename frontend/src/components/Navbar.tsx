@@ -18,7 +18,10 @@ export default function Navbar({ title }: NavbarProps) {
   const { isAdmin, isAuthenticated, logout } = useAuth();
   const isAdminLayout = title !== undefined;
 
-  const navLinks = isAdmin ? [...publicNavLinks, { label: 'Admin', path: '/admin/dashboard' }] : publicNavLinks;
+  const visiblePublicLinks = publicNavLinks.filter((link) =>
+    link.path === '/donor/dashboard' ? isAuthenticated : true,
+  );
+  const navLinks = isAdmin ? [...visiblePublicLinks, { label: 'Admin', path: '/admin/dashboard' }] : visiblePublicLinks;
 
   const handleLogout = async () => {
     await logout();
