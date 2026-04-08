@@ -3,14 +3,14 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import './index.css'
 import App from './App.tsx'
-import { AuthProvider } from './auth/AuthContext.tsx'
+import { CookieConsentProvider } from './context/CookieConsentContext'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <AuthProvider>
+    <CookieConsentProvider>
       <BrowserRouter>
         <App />
       </BrowserRouter>
-    </AuthProvider>
+    </CookieConsentProvider>
   </StrictMode>,
 )

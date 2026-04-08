@@ -1,4 +1,5 @@
 using backend.Data;
+using backend.Middleware;
 using backend.Models;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
@@ -15,13 +16,6 @@ builder.Services.AddDbContext<IntexDbContext>(options =>
 builder.Services
     .AddIdentity<ApplicationUser, IdentityRole>(options =>
     {
-        // Password requirements - enforce strong passwords
-        options.Password.RequireDigit = true;
-        options.Password.RequireLowercase = true;
-        options.Password.RequireUppercase = true;
-        options.Password.RequireNonAlphanumeric = true;
-        options.Password.RequiredLength = 12;
-        
         // Lockout settings
         options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
         options.Lockout.MaxFailedAccessAttempts = 5;
@@ -31,6 +25,16 @@ builder.Services
     })
     .AddEntityFrameworkStores<IntexDbContext>()
     .AddDefaultTokenProviders();
+
+builder.Services.Configure<IdentityOptions>(options =>
+{
+    options.Password.RequireDigit = false;
+    options.Password.RequireLowercase = false;
+    options.Password.RequireNonAlphanumeric = false;
+    options.Password.RequireUppercase = false;
+    options.Password.RequiredLength = 14;
+    options.Password.RequiredUniqueChars = 1;
+});
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -83,6 +87,7 @@ app.UseCors("ProdCors");
 app.UseForwardedHeaders();
 
 app.UseHttpsRedirection();
+app.UseSecurityHeaders();
 
 // Add authentication and authorization middleware
 app.UseAuthentication();

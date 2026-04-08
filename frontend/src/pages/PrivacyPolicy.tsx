@@ -86,7 +86,10 @@ export default function PrivacyPolicy() {
       </main>
 
       <footer className="footer">
-        <p>&copy; {new Date().getFullYear()} SafeHaven PH. All rights reserved.</p>
+        <p>
+          &copy; {new Date().getFullYear()} SafeHaven PH. All rights reserved. | <a href="/privacy">Privacy Policy</a> |{' '}
+          <a href="/cookies">Cookie Policy</a>
+        </p>
       </footer>
     </div>
   );
