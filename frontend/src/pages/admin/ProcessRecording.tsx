@@ -9,8 +9,15 @@ interface ProcessRecording {
   sessionDate: string;
   socialWorker: string;
   sessionType: string;
+  sessionDurationMinutes: number;
   emotionalStateObserved: string;
+  emotionalStateEnd: string;
+  sessionNarrative: string;
+  interventionsApplied: string;
   followUpActions: string;
+  progressNoted: boolean;
+  concernsFlagged: boolean;
+  referralMade: boolean;
 }
 
 export default function ProcessRecording() {
@@ -19,6 +26,11 @@ export default function ProcessRecording() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
+
+  const [showModal, setShowModal] = useState(false);
+  const [editRecording, setEditRecording] = useState<ProcessRecording | null>(null);
+  const [formData, setFormData] = useState<Partial<ProcessRecording>>({});
+  const [saving, setSaving] = useState(false);
 
   const fetchRecordings = (skipVal: number) => {
     setLoading(true);
@@ -46,6 +58,46 @@ export default function ProcessRecording() {
     fetchRecordings(newSkip);
   };
 
+  const openModal = (recording: ProcessRecording | null) => {
+    setEditRecording(recording);
+    setFormData(recording ? { ...recording } : {});
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setEditRecording(null);
+    setFormData({});
+  };
+
+  const saveRecording = async () => {
+    setSaving(true);
+    try {
+      if (editRecording?.recordingId) {
+        await apiClient.put(`/ProcessRecordings/${editRecording.recordingId}`, formData);
+      } else {
+        await apiClient.post('/ProcessRecordings', formData);
+      }
+      fetchRecordings(0);
+      closeModal();
+    } catch (err) {
+      alert('Failed to save recording.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const deleteRecording = async (id: number) => {
+    if (window.confirm('Delete this recording?')) {
+      try {
+        await apiClient.delete(`/ProcessRecordings/${id}`);
+        fetchRecordings(0);
+      } catch (err) {
+        alert('Failed to delete recording.');
+      }
+    }
+  };
+
   return (
     <AdminLayout title="Process Recording">
       <div className="page-header">
@@ -53,7 +105,7 @@ export default function ProcessRecording() {
           <h2>Process Recording</h2>
           <p>Document counseling sessions and emotional support interventions</p>
         </div>
-        <button className="btn btn-primary">+ New Session Note</button>
+        <button className="btn btn-primary" onClick={() => openModal(null)}>+ New Session Note</button>
       </div>
 
       <div className="filter-bar">
@@ -93,7 +145,10 @@ export default function ProcessRecording() {
                 <td>{r.sessionType}</td>
                 <td>{r.emotionalStateObserved}</td>
                 <td>{r.followUpActions}</td>
-                <td><button className="btn btn-sm">View</button></td>
+                <td style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button className="btn btn-sm btn-secondary" onClick={() => openModal(r)}>Edit</button>
+                  <button className="btn btn-sm btn-danger" onClick={() => deleteRecording(r.recordingId!)}>Delete</button>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -114,6 +169,82 @@ export default function ProcessRecording() {
           session type (individual/group), emotional state observed, narrative summary, interventions, and follow-up actions.
         </p>
       </div>
+
+      {/* Process Recording Modal */}
+      {showModal && (
+        <div className="modal-overlay" onClick={closeModal}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>{editRecording ? 'Edit Session Note' : 'New Session Note'}</h3>
+              <button className="modal-close" onClick={closeModal}>×</button>
+            </div>
+            <div>
+              <div className="form-group">
+                <label>Resident ID</label>
+                <input type="number" value={formData.residentId ?? ''} onChange={(e) => setFormData({ ...formData, residentId: parseInt(e.target.value) || 0 })} />
+              </div>
+              <div className="form-group">
+                <label>Session Date</label>
+                <input type="date" value={formData.sessionDate?.split('T')[0] ?? ''} onChange={(e) => setFormData({ ...formData, sessionDate: e.target.value })} />
+              </div>
+              <div className="form-group">
+                <label>Social Worker</label>
+                <input type="text" value={formData.socialWorker ?? ''} onChange={(e) => setFormData({ ...formData, socialWorker: e.target.value })} />
+              </div>
+              <div className="form-group">
+                <label>Session Type</label>
+                <input type="text" value={formData.sessionType ?? ''} onChange={(e) => setFormData({ ...formData, sessionType: e.target.value })} />
+              </div>
+              <div className="form-group">
+                <label>Session Duration (minutes)</label>
+                <input type="number" value={formData.sessionDurationMinutes ?? ''} onChange={(e) => setFormData({ ...formData, sessionDurationMinutes: parseInt(e.target.value) || 0 })} />
+              </div>
+              <div className="form-group">
+                <label>Emotional State Observed</label>
+                <input type="text" value={formData.emotionalStateObserved ?? ''} onChange={(e) => setFormData({ ...formData, emotionalStateObserved: e.target.value })} />
+              </div>
+              <div className="form-group">
+                <label>Emotional State (End)</label>
+                <input type="text" value={formData.emotionalStateEnd ?? ''} onChange={(e) => setFormData({ ...formData, emotionalStateEnd: e.target.value })} />
+              </div>
+              <div className="form-group">
+                <label>Session Narrative</label>
+                <textarea value={formData.sessionNarrative ?? ''} onChange={(e) => setFormData({ ...formData, sessionNarrative: e.target.value })} />
+              </div>
+              <div className="form-group">
+                <label>Interventions Applied</label>
+                <textarea value={formData.interventionsApplied ?? ''} onChange={(e) => setFormData({ ...formData, interventionsApplied: e.target.value })} />
+              </div>
+              <div className="form-group">
+                <label>Follow-up Actions</label>
+                <textarea value={formData.followUpActions ?? ''} onChange={(e) => setFormData({ ...formData, followUpActions: e.target.value })} />
+              </div>
+              <div className="form-group">
+                <label>
+                  <input type="checkbox" checked={formData.progressNoted ?? false} onChange={(e) => setFormData({ ...formData, progressNoted: e.target.checked })} />
+                  {' '}Progress Noted
+                </label>
+              </div>
+              <div className="form-group">
+                <label>
+                  <input type="checkbox" checked={formData.concernsFlagged ?? false} onChange={(e) => setFormData({ ...formData, concernsFlagged: e.target.checked })} />
+                  {' '}Concerns Flagged
+                </label>
+              </div>
+              <div className="form-group">
+                <label>
+                  <input type="checkbox" checked={formData.referralMade ?? false} onChange={(e) => setFormData({ ...formData, referralMade: e.target.checked })} />
+                  {' '}Referral Made
+                </label>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={closeModal} disabled={saving}>Cancel</button>
+              <button className="btn btn-primary" onClick={saveRecording} disabled={saving}>{saving ? 'Saving...' : 'Save'}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </AdminLayout>
   );
 }

@@ -7,9 +7,14 @@ interface SafehouseMonthlyMetric {
   metricId: number;
   safehouseId: number;
   monthStart: string;
+  monthEnd: string;
   activeResidents: number;
   avgEducationProgress: number | null;
   avgHealthScore: number | null;
+  processRecordingCount: number;
+  homeVisitationCount: number;
+  incidentCount: number;
+  notes: string;
 }
 
 interface Resident {
@@ -24,6 +29,11 @@ export default function Reports() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
+
+  const [showModal, setShowModal] = useState(false);
+  const [editMetric, setEditMetric] = useState<SafehouseMonthlyMetric | null>(null);
+  const [formData, setFormData] = useState<Partial<SafehouseMonthlyMetric>>({});
+  const [saving, setSaving] = useState(false);
 
   const fetchMetrics = (skipVal: number) => {
     setLoading(true);
@@ -54,6 +64,46 @@ export default function Reports() {
     fetchMetrics(newSkip);
   };
 
+  const openModal = (metric: SafehouseMonthlyMetric | null) => {
+    setEditMetric(metric);
+    setFormData(metric ? { ...metric } : {});
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setEditMetric(null);
+    setFormData({});
+  };
+
+  const saveMetric = async () => {
+    setSaving(true);
+    try {
+      if (editMetric?.metricId) {
+        await apiClient.put(`/SafehouseMonthlyMetrics/${editMetric.metricId}`, formData);
+      } else {
+        await apiClient.post('/SafehouseMonthlyMetrics', formData);
+      }
+      fetchMetrics(0);
+      closeModal();
+    } catch (err) {
+      alert('Failed to save metric.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const deleteMetric = async (id: number) => {
+    if (window.confirm('Delete this metric?')) {
+      try {
+        await apiClient.delete(`/SafehouseMonthlyMetrics/${id}`);
+        fetchMetrics(0);
+      } catch (err) {
+        alert('Failed to delete metric.');
+      }
+    }
+  };
+
   const avgEducation = metrics.length
     ? (metrics.reduce((sum, m) => sum + (m.avgEducationProgress ?? 0), 0) / metrics.length).toFixed(1)
     : '—';
@@ -73,6 +123,7 @@ export default function Reports() {
           <h2>Reports & Analytics</h2>
           <p>Insights and trends to support decision-making</p>
         </div>
+        <button className="btn btn-primary" onClick={() => openModal(null)}>+ Add Metric</button>
       </div>
 
       <div className="filter-bar">
@@ -93,6 +144,7 @@ export default function Reports() {
               <th>Active Residents</th>
               <th>Avg Education Progress</th>
               <th>Avg Health Score</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -109,6 +161,10 @@ export default function Reports() {
                 <td>{m.activeResidents}</td>
                 <td>{m.avgEducationProgress != null ? m.avgEducationProgress : '—'}</td>
                 <td>{m.avgHealthScore != null ? m.avgHealthScore : '—'}</td>
+                <td style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button className="btn btn-sm btn-secondary" onClick={() => openModal(m)}>Edit</button>
+                  <button className="btn btn-sm btn-danger" onClick={() => deleteMetric(m.metricId!)}>Delete</button>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -147,6 +203,64 @@ export default function Reports() {
           </tbody>
         </table>
       </div>
+
+      {/* Metric Modal */}
+      {showModal && (
+        <div className="modal-overlay" onClick={closeModal}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>{editMetric ? 'Edit Metric' : 'Add Metric'}</h3>
+              <button className="modal-close" onClick={closeModal}>×</button>
+            </div>
+            <div>
+              <div className="form-group">
+                <label>Safehouse ID</label>
+                <input type="number" value={formData.safehouseId ?? ''} onChange={(e) => setFormData({ ...formData, safehouseId: parseInt(e.target.value) || 0 })} />
+              </div>
+              <div className="form-group">
+                <label>Month Start</label>
+                <input type="date" value={formData.monthStart?.split('T')[0] ?? ''} onChange={(e) => setFormData({ ...formData, monthStart: e.target.value })} />
+              </div>
+              <div className="form-group">
+                <label>Month End</label>
+                <input type="date" value={formData.monthEnd?.split('T')[0] ?? ''} onChange={(e) => setFormData({ ...formData, monthEnd: e.target.value })} />
+              </div>
+              <div className="form-group">
+                <label>Active Residents</label>
+                <input type="number" value={formData.activeResidents ?? ''} onChange={(e) => setFormData({ ...formData, activeResidents: parseInt(e.target.value) || 0 })} />
+              </div>
+              <div className="form-group">
+                <label>Avg Education Progress</label>
+                <input type="number" step="0.01" value={formData.avgEducationProgress ?? ''} onChange={(e) => setFormData({ ...formData, avgEducationProgress: parseFloat(e.target.value) || null })} />
+              </div>
+              <div className="form-group">
+                <label>Avg Health Score</label>
+                <input type="number" step="0.01" value={formData.avgHealthScore ?? ''} onChange={(e) => setFormData({ ...formData, avgHealthScore: parseFloat(e.target.value) || null })} />
+              </div>
+              <div className="form-group">
+                <label>Process Recording Count</label>
+                <input type="number" value={formData.processRecordingCount ?? ''} onChange={(e) => setFormData({ ...formData, processRecordingCount: parseInt(e.target.value) || 0 })} />
+              </div>
+              <div className="form-group">
+                <label>Home Visitation Count</label>
+                <input type="number" value={formData.homeVisitationCount ?? ''} onChange={(e) => setFormData({ ...formData, homeVisitationCount: parseInt(e.target.value) || 0 })} />
+              </div>
+              <div className="form-group">
+                <label>Incident Count</label>
+                <input type="number" value={formData.incidentCount ?? ''} onChange={(e) => setFormData({ ...formData, incidentCount: parseInt(e.target.value) || 0 })} />
+              </div>
+              <div className="form-group">
+                <label>Notes</label>
+                <textarea value={formData.notes ?? ''} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} />
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={closeModal} disabled={saving}>Cancel</button>
+              <button className="btn btn-primary" onClick={saveMetric} disabled={saving}>{saving ? 'Saving...' : 'Save'}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </AdminLayout>
   );
 }
