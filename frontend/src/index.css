@@ -18,6 +18,21 @@
   --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
 }
 
+:root[data-theme='dark'] {
+  --primary: #00b8a9;
+  --primary-dark: #00a092;
+  --bg: #12151a;
+  --accent: #ff6b8b;
+  --highlight: #ffd267;
+  --text: #ecf1f7;
+  --text-muted: #b7c0cc;
+  --white: #1b2330;
+  --card-bg: #1b2330;
+  --border: #2d3a4c;
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 4px 18px rgba(0, 0, 0, 0.45);
+}
+
 /* ─── Reset & Base ───────────────────────────────────────────────────── */
 *, *::before, *::after {
   box-sizing: border-box;

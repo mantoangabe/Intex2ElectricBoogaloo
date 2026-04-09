@@ -9,6 +9,7 @@ import DonorDashboard from './pages/donor/DonorDashboard';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import CookiePolicyPage from './pages/CookiePolicyPage';
 import CookieConsentBanner from './components/CookieConsentBanner';
+import ThemeToggle from './components/ThemeToggle';
 import RequireAdmin from './components/RequireAdmin';
 import RequireDonor from './components/RequireDonor';
 
@@ -47,6 +48,7 @@ function App() {
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
       <CookieConsentBanner />
+      <ThemeToggle />
     </>
   );
 }

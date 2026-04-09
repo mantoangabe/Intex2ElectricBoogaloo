@@ -42,6 +42,12 @@ builder.Services.Configure<IdentityOptions>(options =>
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddHsts(options =>
+{
+    options.MaxAge = TimeSpan.FromDays(180);
+    options.IncludeSubDomains = true;
+    options.Preload = false;
+});
 
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
@@ -115,6 +121,10 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+}
+else
+{
+    app.UseHsts();
 }
 
 app.UseCors("AppCors");
