@@ -52,7 +52,7 @@ export default function LoginPage() {
     <div className="login-container">
       <div className="login-card">
         <div className="login-header">
-          <h1>SafeHaven Login</h1>
+          <h1>River of Life Admin</h1>
           <p>Sign in to continue</p>
         </div>
 

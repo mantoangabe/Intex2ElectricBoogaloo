@@ -6,7 +6,7 @@ export default function PrivacyPolicy() {
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <Navbar />
 
-      <main style={{ flex: 1, padding: '2rem', maxWidth: '900px', margin: '0 auto' }}>
+      <main className="public-page-main">
         <h1 style={{ color: 'var(--text)' }}>Privacy Policy</h1>
         <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>
           Last updated: April 6, 2026
@@ -15,7 +15,7 @@ export default function PrivacyPolicy() {
         <section style={{ marginBottom: '2rem' }}>
           <h2 style={{ color: 'var(--text)', marginTop: 0 }}>1. Introduction</h2>
           <p style={{ color: 'var(--text)', lineHeight: 1.7 }}>
-            SafeHaven PH ("we", "us", "our", or "Company") is committed to protecting your privacy. This Privacy Policy explains
+            River of Life ("we", "us", "our", or "Company") is committed to protecting your privacy. This Privacy Policy explains
             how we collect, use, disclose, and safeguard your information when you visit our website and use our services.
           </p>
         </section>
@@ -87,7 +87,7 @@ export default function PrivacyPolicy() {
 
       <footer className="footer">
         <p>
-          &copy; {new Date().getFullYear()} SafeHaven PH. All rights reserved. | <a href="/privacy">Privacy Policy</a> |{' '}
+          &copy; {new Date().getFullYear()} River of Life. All rights reserved. | <a href="/privacy">Privacy Policy</a> |{' '}
           <a href="/cookies">Cookie Policy</a>
         </p>
       </footer>

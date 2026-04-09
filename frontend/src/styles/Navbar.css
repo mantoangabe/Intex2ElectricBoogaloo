@@ -24,7 +24,7 @@
 }
 
 .navbar-links a {
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--white);
   font-weight: 500;
   text-decoration: none;
   transition: color 0.2s;
@@ -35,12 +35,165 @@
   color: var(--white);
 }
 
+.navbar-hamburger {
+  display: none;
+}
+
+.navbar-mobile-menu {
+  display: none;
+}
+
 @media (max-width: 768px) {
   .navbar {
     padding: 1rem;
+    position: relative;
   }
 
   .navbar-brand {
     font-size: 1rem;
+  }
+
+  .navbar-links {
+    display: none;
+  }
+
+  .navbar-hamburger {
+    display: flex;
+  }
+
+  .navbar-mobile-menu {
+    display: flex;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: rgba(0, 0, 0, 0.95);
+    flex-direction: column;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    z-index: 1000;
+  }
+}
+
+.navbar-mobile-menu-link {
+  display: block;
+  padding: 1rem 2rem;
+  color: var(--white);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  transition: background 0.2s, color 0.2s;
+  cursor: pointer;
+}
+
+.navbar-mobile-menu-link:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--white);
+}
+
+/* ─── Admin header elements ──────────────────────────────────────────── */
+.admin-header-title {
+  margin: 0;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.admin-title-short {
+  display: none;
+}
+
+.admin-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.admin-header-nav-link {
+  cursor: pointer;
+  text-decoration: none;
+  color: var(--white);
+  transition: color 0.2s;
+  white-space: nowrap;
+}
+
+.admin-header-nav-link:hover {
+  color: var(--white);
+}
+
+.hamburger-btn {
+  display: none;
+  width: 2rem;
+  height: 2rem;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.4rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.hamburger-btn span {
+  width: 100%;
+  height: 3px;
+  background: var(--white);
+  border-radius: 2px;
+  transition: all 0.3s;
+}
+
+.admin-mobile-menu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: rgba(0, 0, 0, 0.95);
+  flex-direction: column;
+  width: 100%;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  z-index: 1000;
+}
+
+.admin-mobile-menu-link {
+  display: block;
+  padding: 1rem 2rem;
+  color: var(--white);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  transition: background 0.2s, color 0.2s;
+  cursor: pointer;
+}
+
+.admin-mobile-menu-link:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--white);
+}
+
+@media (max-width: 768px) {
+  .admin-title-full {
+    display: none;
+  }
+
+  .admin-title-short {
+    display: inline;
+  }
+
+  .admin-header-nav-link {
+    display: none;
+  }
+
+  .hamburger-btn {
+    display: flex;
+  }
+
+  .admin-mobile-menu {
+    display: flex;
+  }
+
+  .admin-header-actions {
+    gap: 0.75rem;
+  }
+
+  .logout-btn {
+    display: none;
   }
 }

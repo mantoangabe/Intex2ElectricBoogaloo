@@ -62,7 +62,7 @@ export default function AdminDashboard() {
   const fmt = (val: number | null) => val === null ? '...' : val.toLocaleString();
 
   return (
-    <AdminLayout title="SafeHaven Admin Dashboard">
+    <AdminLayout title="River of Life Admin Dashboard">
       <div className="admin-welcome">
         <h2>Welcome back, Staff Member</h2>
         <p>Here's an overview of your operations</p>

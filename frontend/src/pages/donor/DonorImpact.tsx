@@ -1,102 +1,205 @@
 import { useEffect, useState } from 'react';
 import Navbar from '../../components/Navbar';
 import '../../styles/styles.css';
+import '../../styles/DonorImpact.css';
 import apiClient from '../../api/apiClient';
 
-interface Safehouse {
-  safehouseId: number;
-  name: string;
-  currentOccupancy: number;
-  status: string;
+interface Donation {
+  donationId: number;
+  supporterId: number;
+  donationDate: string;
+  amount?: number;
+  estimatedValue?: number;
 }
 
 export default function DonorImpact() {
-  const [safehouses, setSafehouses] = useState<Safehouse[]>([]);
-  const [skip, setSkip] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [hasMore, setHasMore] = useState(false);
-
-  const fetchSafehouses = (skipVal: number) => {
-    setLoading(true);
-    apiClient.get<Safehouse[]>('/Safehouses', { params: { skip: skipVal, take: 25 } })
-      .then(res => {
-        setHasMore(res.data.length === 25);
-        if (skipVal === 0) {
-          setSafehouses(res.data);
-        } else {
-          setSafehouses(prev => [...prev, ...res.data]);
-        }
-        setError(null);
-      })
-      .catch(() => setError('Failed to load safehouse data.'))
-      .finally(() => setLoading(false));
-  };
+  const [totalThisYear, setTotalThisYear] = useState<number | null>(null);
+  const [totalDonors, setTotalDonors] = useState<number | null>(null);
+  const [partners, setPartners] = useState<number | null>(null);
+  const [residentCount, setResidentCount] = useState<number | null>(null);
+  const [safehouseCount, setSafehouseCount] = useState<number | null>(null);
+  const [healthCheckIns, setHealthCheckIns] = useState<number | null>(null);
+  const [educationEnrollments, setEducationEnrollments] = useState<number | null>(null);
 
   useEffect(() => {
-    fetchSafehouses(0);
+    const currentYear = new Date().getFullYear();
+
+    apiClient.get<Donation[]>('/Donations', { params: { take: 10000 } })
+      .then(res => {
+        const yearDonations = res.data.filter(
+          d => new Date(d.donationDate).getFullYear() === currentYear
+        );
+        setTotalThisYear(
+          yearDonations.reduce((sum, d) => sum + (d.amount ?? d.estimatedValue ?? 0), 0)
+        );
+        setTotalDonors(new Set(res.data.map(d => d.supporterId)).size);
+      })
+      .catch(() => { setTotalThisYear(0); setTotalDonors(0); });
+
+    apiClient.get('/Partners', { params: { take: 10000 } })
+      .then(r => setPartners(r.data.length))
+      .catch(() => setPartners(null));
+
+    apiClient.get('/Residents', { params: { take: 10000 } })
+      .then(r => setResidentCount(r.data.length))
+      .catch(() => setResidentCount(null));
+
+    apiClient.get('/Safehouses', { params: { take: 10000 } })
+      .then(r => setSafehouseCount(r.data.length))
+      .catch(() => setSafehouseCount(null));
+
+    apiClient.get('/HealthWellbeingRecords', { params: { take: 10000 } })
+      .then(r => setHealthCheckIns(r.data.length))
+      .catch(() => setHealthCheckIns(null));
+
+    apiClient.get('/EducationRecords', { params: { take: 10000 } })
+      .then(r => setEducationEnrollments(r.data.length))
+      .catch(() => setEducationEnrollments(null));
   }, []);
 
-  const handleShowMore = () => {
-    const newSkip = skip + 25;
-    setSkip(newSkip);
-    fetchSafehouses(newSkip);
-  };
+  const fmt = (val: number | null) => val === null ? '...' : val.toLocaleString();
+
+  function StatCard({ label, value }: { label: string; value: string }) {
+    return (
+      <div style={{
+        background: 'var(--white)',
+        borderRadius: '16px',
+        boxShadow: 'var(--shadow-sm)',
+        padding: '1.75rem 2rem',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        flex: '1 1 150px',
+        minWidth: '150px',
+      }}>
+        <p style={{ color: 'var(--text-muted)', fontWeight: 600, margin: '0 0 0.5rem', textAlign: 'center', fontSize: '0.875rem' }}>
+          {label}
+        </p>
+        <p style={{ fontSize: '2.25rem', fontWeight: 700, margin: 0, color: 'var(--text)' }}>
+          {value}
+        </p>
+      </div>
+    );
+  }
+
+  const sections = [
+    {
+      number: 1,
+      heading: 'You donate',
+      description:
+        'Every contribution goes directly to supporting survivors of trafficking and abuse — providing safe shelter, healing programs, and hope for the future.',
+      topCards: [
+        {
+          label: 'Donated This Year',
+          value: totalThisYear === null
+            ? '...'
+            : `$${totalThisYear.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
+        },
+      ],
+      bottomCards: [
+        { label: 'Total Donors', value: fmt(totalDonors) },
+        { label: 'Partner Organizations', value: fmt(partners) },
+      ],
+    },
+    {
+      number: 2,
+      heading: 'For those who need it most',
+      description:
+        'Your support reaches vulnerable women and children who have experienced exploitation and abuse — giving them a safe place and a second chance.',
+      topCards: [
+        { label: 'Residents in Our Care', value: fmt(residentCount) },
+      ],
+    },
+    {
+      number: 3,
+      heading: 'We take care of the rest',
+      description:
+        'Our team provides comprehensive care — safe shelter, regular health check-ins, and education programs that equip survivors for long-term independence.',
+      topCards: [
+        { label: 'Safehouses', value: fmt(safehouseCount) },
+      ],
+      bottomCards: [
+        { label: 'Health Check-ins', value: fmt(healthCheckIns) },
+        { label: 'Education Enrollments', value: fmt(educationEnrollments) },
+      ],
+    },
+  ];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <Navbar />
 
-      <main style={{ flex: 1, padding: '2rem' }}>
-        <h1 style={{ textAlign: 'center', color: 'var(--text)', marginBottom: '0.5rem' }}>
-          Our Impact
-        </h1>
-        <p style={{ textAlign: 'center', color: 'var(--text-muted)', marginBottom: '2rem' }}>
-          Aggregated, anonymized data showing the organization's impact, outcomes, and resource use
-        </p>
+      <main style={{ flex: 1 }}>
+        <div className="donor-impact-container">
+          {sections.map((section, idx) => (
+            <div
+              key={section.number}
+              className="donor-impact-row"
+              style={{ paddingBottom: idx < sections.length - 1 ? '5rem' : 0 }}
+            >
+              {/* Timeline: number circle + connecting line */}
+              <div className="donor-impact-timeline">
+                <div style={{
+                  width: '3rem',
+                  height: '3rem',
+                  borderRadius: '50%',
+                  background: 'var(--primary)',
+                  color: 'var(--white)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 700,
+                  fontSize: '1.1rem',
+                  flexShrink: 0,
+                }}>
+                  {section.number}
+                </div>
+                {idx < sections.length - 1 && (
+                  <div className="donor-impact-timeline-line" />
+                )}
+              </div>
 
-        <div style={{ background: 'var(--white)', padding: '2rem', borderRadius: '8px', boxShadow: 'var(--shadow-sm)' }}>
-          <h2 style={{ color: 'var(--text)', marginTop: 0 }}>Safehouse Performance</h2>
-          <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem' }}>
-            <thead>
-              <tr style={{ borderBottom: '2px solid var(--border)' }}>
-                <th style={{ textAlign: 'left', padding: '0.75rem 0', fontWeight: 700 }}>Safehouse</th>
-                <th style={{ textAlign: 'left', padding: '0.75rem 0', fontWeight: 700 }}>Current Residents</th>
-                <th style={{ textAlign: 'left', padding: '0.75rem 0', fontWeight: 700 }}>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading && (
-                <tr><td colSpan={3} style={{ textAlign: 'center', padding: '2rem 0', color: 'var(--text-muted)' }}>Loading...</td></tr>
-              )}
-              {error && (
-                <tr><td colSpan={3} style={{ textAlign: 'center', padding: '2rem 0', color: 'var(--text-muted)' }}>{error}</td></tr>
-              )}
-              {!loading && !error && safehouses.length === 0 && (
-                <tr><td colSpan={3} style={{ textAlign: 'center', padding: '2rem 0', color: 'var(--text-muted)' }}>No safehouses found.</td></tr>
-              )}
-              {!loading && !error && safehouses.map(s => (
-                <tr key={s.safehouseId} style={{ borderBottom: '1px solid var(--border)' }}>
-                  <td style={{ padding: '0.75rem 0' }}>{s.name}</td>
-                  <td style={{ padding: '0.75rem 0' }}>{s.currentOccupancy}</td>
-                  <td style={{ padding: '0.75rem 0' }}>{s.status}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {hasMore && (
-            <div style={{ textAlign: 'center', marginTop: '1rem' }}>
-              <button className="btn btn-secondary" onClick={handleShowMore} disabled={loading}>
-                {loading ? 'Loading...' : 'Show More'}
-              </button>
+              {/* Left: heading + description */}
+              <div style={{ paddingTop: '0.4rem' }}>
+                <h2 style={{ color: 'var(--text)', marginBottom: '1rem' }}>
+                  {section.heading}
+                </h2>
+                <p style={{ color: 'var(--text-muted)', lineHeight: 1.7, margin: 0 }}>
+                  {section.description}
+                </p>
+              </div>
+
+              {/* Right: stat cards */}
+              <div className="donor-impact-stats">
+                {(section.number === 1 || section.number === 3) && section.bottomCards && section.bottomCards.length > 0 ? (
+                  <>
+                    <div className="donor-impact-stats-row">
+                      {section.topCards.map(card => (
+                        <StatCard key={card.label} label={card.label} value={card.value} />
+                      ))}
+                    </div>
+                    <div className="donor-impact-stats-row">
+                      {section.bottomCards.map(card => (
+                        <StatCard key={card.label} label={card.label} value={card.value} />
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <div className="donor-impact-stats-row">
+                    {section.topCards.map(card => (
+                      <StatCard key={card.label} label={card.label} value={card.value} />
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-          )}
+          ))}
         </div>
       </main>
 
       <footer className="footer">
         <p>
-          &copy; {new Date().getFullYear()} SafeHaven PH. All rights reserved. | <a href="/privacy">Privacy Policy</a> |{' '}
+          &copy; {new Date().getFullYear()} River of Life. All rights reserved. | <a href="/privacy">Privacy Policy</a> |{' '}
           <a href="/cookies">Cookie Policy</a>
         </p>
       </footer>

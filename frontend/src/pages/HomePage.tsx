@@ -39,7 +39,7 @@ export default function HomePage() {
       <section className="about-section">
         <h2>About Us</h2>
         <p>
-          SafeHaven PH is a non-governmental organization dedicated to protecting and
+          River of Life is a non-governmental organization dedicated to protecting and
           empowering vulnerable women and children in the Philippines. Operating under
           the guidelines of the Department of Social Welfare and Development (DSWD),
           we provide comprehensive care spanning shelter, psychosocial support,
@@ -49,7 +49,7 @@ export default function HomePage() {
 
       <footer className="footer">
         <p>
-          &copy; {new Date().getFullYear()} SafeHaven PH. All rights reserved. | <a href="/privacy">Privacy Policy</a> |{' '}
+          &copy; {new Date().getFullYear()} River of Life. All rights reserved. | <a href="/privacy">Privacy Policy</a> |{' '}
           <a href="/cookies">Cookie Policy</a>
         </p>
       </footer>
