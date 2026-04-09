@@ -555,7 +555,7 @@ export default function CaseloadInventory() {
                   className="table-center clickable-th"
                   onClick={() => toggleSort("incidentReachOut")}
                 >
-                  Reached Out{" "}
+                  Incident Risk Reached Out{" "}
                   {sortConfig.key === "incidentReachOut"
                     ? sortConfig.dir === "asc"
                       ? "▲"
