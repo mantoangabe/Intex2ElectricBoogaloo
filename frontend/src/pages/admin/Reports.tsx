@@ -38,6 +38,7 @@ export default function Reports() {
   const [totalCount, setTotalCount] = useState(0);
   const [jumpPage, setJumpPage] = useState("1");
   const [metricSortDir, setMetricSortDir] = useState<"asc" | "desc">("asc");
+  const [safehouseFilter, setSafehouseFilter] = useState("all");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
@@ -80,11 +81,18 @@ export default function Reports() {
   const [draftWordCount, setDraftWordCount] = useState(120);
   const [refreshingSocial, setRefreshingSocial] = useState(false);
 
-  const fetchMetrics = (pageVal: number, size: number) => {
+  const fetchMetrics = (pageVal: number, size: number, safehouse = safehouseFilter) => {
     setLoading(true);
+    const params: Record<string, number> = {
+      skip: (pageVal - 1) * size,
+      take: size,
+    };
+    if (safehouse !== "all") {
+      params.safehouseId = Number(safehouse);
+    }
     apiClient
       .get<SafehouseMonthlyMetric[]>("/SafehouseMonthlyMetrics", {
-        params: { skip: (pageVal - 1) * size, take: size },
+        params,
       })
       .then((res) => {
         setHasMore(res.data.length === size);
@@ -96,10 +104,14 @@ export default function Reports() {
   };
 
   useEffect(() => {
-    fetchMetrics(1, pageSize);
+    fetchMetrics(1, pageSize, safehouseFilter);
+    const countParams: Record<string, number> = { skip: 0, take: 100000 };
+    if (safehouseFilter !== "all") {
+      countParams.safehouseId = Number(safehouseFilter);
+    }
     apiClient
       .get<SafehouseMonthlyMetric[]>("/SafehouseMonthlyMetrics", {
-        params: { skip: 0, take: 100000 },
+        params: countParams,
       })
       .then((r) => setTotalCount(r.data.length))
       .catch(() => {});
@@ -133,34 +145,10 @@ export default function Reports() {
         .then((res) => setDonorPredictions(res.data))
         .catch(() => setDonorPredictions([]));
     }
-  }, []);
+  }, [safehouseFilter]);
 
   const fmtUsd = (value: number) =>
     `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  const conversionCellStyle = (prob?: number | null) => {
-    if (prob == null) return undefined;
-    const pct = prob * 100;
-    const clamped = Math.max(0, Math.min(100, pct));
-    const bucketStart =
-      clamped < 50 ? 0 : clamped < 70 ? 50 : clamped < 81 ? 70 : 81;
-    const bucketEnd =
-      clamped < 50 ? 50 : clamped < 70 ? 70 : clamped < 81 ? 81 : 100;
-    const t = (clamped - bucketStart) / Math.max(1, bucketEnd - bucketStart);
-    const hueStart =
-      clamped < 50 ? 0 : clamped < 70 ? 42 : clamped < 81 ? 92 : 118;
-    const hueEnd =
-      clamped < 50 ? 12 : clamped < 70 ? 60 : clamped < 81 ? 108 : 125;
-    const hue = Math.round(hueStart + (hueEnd - hueStart) * t);
-    const light = Math.round(94 - 18 * t);
-    return {
-      backgroundColor: `hsl(${hue} 85% ${light}%)`,
-      color: `hsl(${hue} 70% 20%)`,
-      fontWeight: 700 as const,
-      borderRadius: "6px",
-      padding: "0.2rem 0.45rem",
-      display: "inline-block",
-    };
-  };
 
   const openModal = (metric: SafehouseMonthlyMetric | null) => {
     setEditMetric(metric);
@@ -291,6 +279,20 @@ export default function Reports() {
       ? "Aim for approximately 80-220 words for best readability and donation intent."
       : "Current length is within a strong range for donation posts.",
   ];
+  const draftPredictedDonation = (() => {
+    let estimate = 180;
+    if (draftPlatform === "Instagram") estimate += 45;
+    if (draftPlatform === "Facebook") estimate += 25;
+    if (draftPostType === "FundraisingAppeal") estimate += 95;
+    if (draftPostType === "Awareness") estimate += 35;
+    if (draftHasCta) estimate += 60;
+    if (draftUrgency) estimate += 35;
+    if (draftImpactStory) estimate += 55;
+    if (draftWordCount >= 80 && draftWordCount <= 220) estimate += 40;
+    if (draftWordCount < 40 || draftWordCount > 320) estimate -= 30;
+    const scoreAdjustment = (draftScore - 50) * 2.1;
+    return Math.max(25, estimate + scoreAdjustment);
+  })();
   const sortedMetrics = [...metrics].sort((a, b) =>
     metricSortDir === "asc"
       ? a.safehouseId - b.safehouseId
@@ -324,8 +326,24 @@ export default function Reports() {
           aria-label="To date"
           placeholder="To date"
         />
-        <select className="filter-select" aria-label="Filter by safehouse">
-          <option>All Safehouses</option>
+        <select
+          className="filter-select"
+          aria-label="Filter by safehouse"
+          value={safehouseFilter}
+          onChange={(e) => {
+            setSafehouseFilter(e.target.value);
+            setPage(1);
+            setJumpPage("1");
+          }}
+        >
+          <option value="all">All Safehouses</option>
+          <option value="1">Safehouse 1</option>
+          <option value="2">Safehouse 2</option>
+          <option value="3">Safehouse 3</option>
+          <option value="4">Safehouse 4</option>
+          <option value="5">Safehouse 5</option>
+          <option value="6">Safehouse 6</option>
+          <option value="7">Safehouse 7</option>
         </select>
       </div>
 
@@ -416,7 +434,7 @@ export default function Reports() {
             onClick={() => {
               const p = page - 1;
               setPage(p);
-              fetchMetrics(p, pageSize);
+              fetchMetrics(p, pageSize, safehouseFilter);
             }}
           >
             Previous
@@ -439,7 +457,7 @@ export default function Reports() {
               const max = Math.max(1, Math.ceil(totalCount / pageSize));
               const p = Math.min(max, Math.max(1, Number(jumpPage) || 1));
               setPage(p);
-              fetchMetrics(p, pageSize);
+              fetchMetrics(p, pageSize, safehouseFilter);
             }}
           >
             Go
@@ -453,7 +471,7 @@ export default function Reports() {
               const size = parsePageSize(e.target.value, totalCount);
               setPageSize(size);
               setPage(1);
-              fetchMetrics(1, size);
+              fetchMetrics(1, size, safehouseFilter);
             }}
           >
             <option value={5}>5 / page</option>
@@ -469,7 +487,7 @@ export default function Reports() {
             onClick={() => {
               const p = page + 1;
               setPage(p);
-              fetchMetrics(p, pageSize);
+              fetchMetrics(p, pageSize, safehouseFilter);
             }}
           >
             Next
@@ -609,75 +627,29 @@ export default function Reports() {
             </div>
           </div>
 
-          <div className="admin-card">
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              <h3>Top Predicted Social Donation Posts</h3>
-              <button
-                className="btn btn-secondary btn-sm"
-                onClick={refreshSocialPredictions}
-                disabled={refreshingSocial}
-              >
-                {refreshingSocial
-                  ? "Refreshing scoring..."
-                  : "Run Social Scoring (No Redeploy)"}
-              </button>
-            </div>
-            <table className="admin-table">
-              <thead>
-                <tr>
-                  <th>Post ID</th>
-                  <th>Predicted Donation Value (USD)</th>
-                  <th>High Conversion Probability</th>
-                </tr>
-              </thead>
-              <tbody>
-                {socialPredictions.slice(0, 10).map((post) => (
-                  <tr key={post.predictionId}>
-                    <td>{post.postId}</td>
-                    <td>{fmtUsd(post.predictedDonationValuePhp)}</td>
-                    <td>
-                      {post.pHighConversion != null ? (
-                        <span
-                          style={conversionCellStyle(post.pHighConversion)}
-                        >{`${(post.pHighConversion * 100).toFixed(1)}%`}</span>
-                      ) : (
-                        "—"
-                      )}
-                    </td>
-                  </tr>
-                ))}
-                {socialPredictions.length === 0 && (
-                  <tr>
-                    <td colSpan={3} className="placeholder-row">
-                      No scored social predictions available.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-            <div
-              style={{
-                marginTop: "0.75rem",
-                color: "var(--text-muted)",
-                fontSize: "0.8rem",
-              }}
-            >
-              Conversion color legend: &lt;50% red, 50-69% yellow, 70-80% light
-              green, 81%+ green. Shade varies within each band.
-            </div>
-          </div>
         </>
       )}
 
       {ENABLE_ML_PREDICTIONS && (
         <div className="admin-card">
-          <h3>Post Draft Scorer (Planning Heuristic)</h3>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <h3>Post Draft Scorer (Planning Heuristic)</h3>
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={refreshSocialPredictions}
+              disabled={refreshingSocial}
+            >
+              {refreshingSocial
+                ? "Refreshing scoring..."
+                : "Run Social Scoring (No Redeploy)"}
+            </button>
+          </div>
           <p style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>
             Frontend planning aid for campaign drafting. This is not direct
             model inference.
@@ -748,6 +720,10 @@ export default function Reports() {
           <div style={{ marginTop: "0.9rem" }}>
             <strong>Estimated Donation Potential:</strong> {draftTier} (
             {draftScore}/100)
+            <div style={{ marginTop: "0.35rem" }}>
+              <strong>Estimated Donation Amount (heuristic):</strong>{" "}
+              {fmtUsd(draftPredictedDonation)}
+            </div>
             <ul style={{ marginTop: "0.5rem" }}>
               {draftActions.map((a) => (
                 <li key={a}>{a}</li>

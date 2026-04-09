@@ -25,9 +25,24 @@ namespace backend.Controllers
 
         // GET: api/SafehouseMonthlyMetrics
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<SafehouseMonthlyMetric>>> GetSafehouseMonthlyMetrics([FromQuery] int skip = 0, [FromQuery] int take = 25)
+        public async Task<ActionResult<IEnumerable<SafehouseMonthlyMetric>>> GetSafehouseMonthlyMetrics(
+            [FromQuery] int skip = 0,
+            [FromQuery] int take = 25,
+            [FromQuery] int? safehouseId = null)
         {
-            return await _context.SafehouseMonthlyMetrics.Skip(skip).Take(take).ToListAsync();
+            var q = _context.SafehouseMonthlyMetrics.AsQueryable();
+
+            if (safehouseId.HasValue)
+            {
+                q = q.Where(x => x.SafehouseId == safehouseId.Value);
+            }
+
+            return await q
+                .OrderByDescending(x => x.MonthStart)
+                .ThenBy(x => x.SafehouseId)
+                .Skip(skip)
+                .Take(take)
+                .ToListAsync();
         }
 
         // GET: api/SafehouseMonthlyMetrics/5
