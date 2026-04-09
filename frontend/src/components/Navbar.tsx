@@ -115,7 +115,7 @@ export default function Navbar({ title }: NavbarProps) {
           </button>
         ) : (
           <button className="btn btn-primary" style={{ padding: '0.5rem 1rem' }} onClick={() => navigate('/login')}>
-            Staff Login
+            Login
           </button>
         )}
       </div>
@@ -162,7 +162,7 @@ export default function Navbar({ title }: NavbarProps) {
                 setMenuOpen(false);
               }}
             >
-              Staff Login
+              Login
             </a>
           )}
         </div>
