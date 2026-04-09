@@ -34,6 +34,10 @@ export default function CaseloadInventory() {
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [totalCount, setTotalCount] = useState(0);
   const [jumpPage, setJumpPage] = useState('1');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [safehouseFilter, setSafehouseFilter] = useState('all');
+  const [caseCategoryFilter, setCaseCategoryFilter] = useState('all');
+  const [caseStatusFilter, setCaseStatusFilter] = useState('all');
   const [sortConfig, setSortConfig] = useState<{ key: string; dir: 'asc' | 'desc' }>({ key: 'residentId', dir: 'asc' });
   const [progressStageFilter, setProgressStageFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all');
   const [incidentStageFilter, setIncidentStageFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all');
@@ -72,7 +76,29 @@ export default function CaseloadInventory() {
 
   const fetchResidents = (pageVal: number, size: number) => {
     setLoading(true);
-    apiClient.get<Resident[]>('/Residents', { params: { skip: (pageVal - 1) * size, take: size } })
+    const params: Record<string, string | number> = {
+      skip: (pageVal - 1) * size,
+      take: size,
+    };
+
+    const trimmedSearch = searchTerm.trim();
+    if (trimmedSearch) {
+      params.search = trimmedSearch;
+    }
+
+    if (safehouseFilter !== 'all') {
+      params.safehouseId = Number(safehouseFilter);
+    }
+
+    if (caseCategoryFilter !== 'all') {
+      params.caseCategory = caseCategoryFilter;
+    }
+
+    if (caseStatusFilter !== 'all') {
+      params.caseStatus = caseStatusFilter;
+    }
+
+    apiClient.get<Resident[]>('/Residents', { params })
       .then(res => {
         setHasMore(res.data.length === size);
         setResidents(res.data);
@@ -83,8 +109,34 @@ export default function CaseloadInventory() {
   };
 
   useEffect(() => {
-    fetchResidents(1, pageSize);
-    apiClient.get<Resident[]>('/Residents', { params: { skip: 0, take: 100000 } }).then(r => setTotalCount(r.data.length)).catch(() => {});
+    const countParams: Record<string, string | number> = {};
+
+    const trimmedSearch = searchTerm.trim();
+    if (trimmedSearch) {
+      countParams.search = trimmedSearch;
+    }
+
+    if (safehouseFilter !== 'all') {
+      countParams.safehouseId = Number(safehouseFilter);
+    }
+
+    if (caseCategoryFilter !== 'all') {
+      countParams.caseCategory = caseCategoryFilter;
+    }
+
+    if (caseStatusFilter !== 'all') {
+      countParams.caseStatus = caseStatusFilter;
+    }
+
+    fetchResidents(page, pageSize);
+
+    apiClient
+      .get<number>('/Residents/count', { params: countParams })
+      .then(r => setTotalCount(r.data))
+      .catch(() => setTotalCount(0));
+  }, [page, pageSize, searchTerm, safehouseFilter, caseCategoryFilter, caseStatusFilter]);
+
+  useEffect(() => {
     if (ENABLE_ML_PREDICTIONS) {
       apiClient
         .get<ResidentProgressPrediction[]>('/ResidentProgressPredictions', {
@@ -165,23 +217,55 @@ export default function CaseloadInventory() {
       </div>
 
       <div className="filter-bar">
-        <input type="text" placeholder="Search by name or ID..." className="filter-input" />
-        <select className="filter-select">
-          <option>All Safehouses</option>
-          <option>Safehouse A</option>
-          <option>Safehouse B</option>
+        <input
+          type="text"
+          placeholder="Search by resident ID, case control no, internal code, or social worker"
+          className="filter-input"
+          value={searchTerm}
+          onChange={(e) => {
+            setSearchTerm(e.target.value);
+            setPage(1);
+          }}
+        />
+        <select
+          className="filter-select"
+          value={safehouseFilter}
+          onChange={(e) => {
+            setSafehouseFilter(e.target.value);
+            setPage(1);
+          }}
+        >
+          <option value="all">All Safehouses</option>
+          <option value="1">Safehouse 1</option>
+          <option value="2">Safehouse 2</option>
+          <option value="3">Safehouse 3</option>
+          <option value="4">Safehouse 4</option>
         </select>
-        <select className="filter-select">
-          <option>All Case Categories</option>
-          <option>Trafficked</option>
-          <option>Physical Abuse</option>
-          <option>Neglected</option>
+        <select
+          className="filter-select"
+          value={caseCategoryFilter}
+          onChange={(e) => {
+            setCaseCategoryFilter(e.target.value);
+            setPage(1);
+          }}
+        >
+          <option value="all">All Case Categories</option>
+          <option value="Trafficked">Trafficked</option>
+          <option value="Physical Abuse">Physical Abuse</option>
+          <option value="Neglected">Neglected</option>
         </select>
-        <select className="filter-select">
-          <option>All Statuses</option>
-          <option>Active</option>
-          <option>Reintegrated</option>
-          <option>Discharged</option>
+        <select
+          className="filter-select"
+          value={caseStatusFilter}
+          onChange={(e) => {
+            setCaseStatusFilter(e.target.value);
+            setPage(1);
+          }}
+        >
+          <option value="all">All Statuses</option>
+          <option value="Active">Active</option>
+          <option value="Reintegrated">Reintegrated</option>
+          <option value="Discharged">Discharged</option>
         </select>
         {ENABLE_ML_PREDICTIONS && (
           <select className="filter-select" value={progressStageFilter} onChange={(e) => setProgressStageFilter(e.target.value as any)}>
@@ -261,7 +345,7 @@ export default function CaseloadInventory() {
         </table>
         <div className="pagination-row">
           <button className="btn btn-secondary btn-sm" disabled={page === 1 || loading} onClick={() => {
-            const p = page - 1; setPage(p); fetchResidents(p, pageSize);
+            const p = page - 1; setPage(p);
           }}>Previous</button>
           <span>Page {page} of {Math.max(1, Math.ceil(totalCount / pageSize))}</span>
           <input className="pagination-jump-input" type="number" min={1} max={Math.max(1, Math.ceil(totalCount / pageSize))} value={jumpPage} onChange={(e) => setJumpPage(e.target.value)} />
@@ -269,20 +353,18 @@ export default function CaseloadInventory() {
             const max = Math.max(1, Math.ceil(totalCount / pageSize));
             const p = Math.min(max, Math.max(1, Number(jumpPage) || 1));
             setPage(p);
-            fetchResidents(p, pageSize);
           }}>Go</button>
           <select className="filter-select" style={{ marginLeft: 'auto' }} value={pageSize} onChange={(e) => {
             const size = Number(e.target.value);
             setPageSize(size);
             setPage(1);
-            fetchResidents(1, size);
           }}>
             <option value={10}>10 / page</option>
             <option value={25}>25 / page</option>
             <option value={50}>50 / page</option>
           </select>
           <button className="btn btn-secondary btn-sm" disabled={!hasMore || loading} onClick={() => {
-            const p = page + 1; setPage(p); fetchResidents(p, pageSize);
+            const p = page + 1; setPage(p);
           }}>Next</button>
         </div>
         {ENABLE_ML_PREDICTIONS && (

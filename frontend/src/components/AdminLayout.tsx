@@ -13,6 +13,7 @@ const navItems = [
   { label: 'Process Recording', path: '/admin/process-recording' },
   { label: 'Home Visits', path: '/admin/home-visits' },
   { label: 'Donors & Contributions', path: '/admin/donors' },
+  { label: 'User Roles', path: '/admin/user-roles' },
   { label: 'Reports & Analytics', path: '/admin/reports' },
 ];
 

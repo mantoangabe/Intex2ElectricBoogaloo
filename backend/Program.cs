@@ -46,8 +46,6 @@ builder.Services.AddSwaggerGen();
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
-
-    // Trust reverse proxy headers in server environments where proxy IP may vary.
     options.KnownIPNetworks.Clear();
     options.KnownProxies.Clear();
 });

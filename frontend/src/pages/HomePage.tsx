@@ -1,9 +1,25 @@
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../auth/AuthContext';
 import Navbar from '../components/Navbar';
 import '../styles/HomePage.css';
 
 export default function HomePage() {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+
+  const handleDonateClick = () => {
+    if (isAuthenticated) {
+      navigate('/donor/dashboard');
+      return;
+    }
+
+    navigate('/login', {
+      state: {
+        prompt: 'Please sign in to donate.',
+      },
+    });
+  };
+
   return (
     <div className="home">
       <Navbar />
@@ -15,7 +31,7 @@ export default function HomePage() {
           for survivors of trafficking and abuse across the Philippines.
         </p>
         <div className="hero-buttons">
-          <button className="btn btn-primary" onClick={() => navigate('/donor/dashboard')}>Support Our Mission</button>
+          <button className="btn btn-primary" onClick={handleDonateClick}>Support Our Mission</button>
           <button className="btn btn-outline" onClick={() => navigate('/donor')}>View Our Impact</button>
         </div>
       </section>
