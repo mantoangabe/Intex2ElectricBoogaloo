@@ -86,6 +86,7 @@
   justify-content: space-between;
   align-items: center;
   box-shadow: var(--shadow-md);
+  position: relative;
 }
 
 .admin-header h1 {

@@ -74,8 +74,35 @@
 }
 
 @media (max-width: 768px) {
+  .admin-welcome {
+    margin-bottom: 1.5rem;
+  }
+
+  .admin-welcome h2 {
+    font-size: 1.4rem;
+  }
+
   .metrics-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .metric-card {
+    padding: 1.25rem;
+  }
+
+  .metric-value {
+    font-size: 2rem;
+  }
+
+  .metric-label {
+    font-size: 0.85rem;
+  }
+
+  .admin-card h3 {
+    font-size: 1rem;
+    margin-bottom: 0.75rem;
   }
 
   .quick-actions {
@@ -84,5 +111,37 @@
 
   .quick-actions .btn {
     width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-welcome {
+    margin-bottom: 1.25rem;
+  }
+
+  .admin-welcome h2 {
+    font-size: 1.2rem;
+  }
+
+  .admin-welcome p {
+    font-size: 0.85rem;
+  }
+
+  .metrics-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .metric-card {
+    padding: 1rem;
+  }
+
+  .metric-value {
+    font-size: 1.8rem;
+  }
+
+  .metric-label {
+    font-size: 0.8rem;
   }
 }
