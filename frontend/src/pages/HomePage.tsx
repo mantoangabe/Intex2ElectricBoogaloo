@@ -40,7 +40,7 @@ export default function HomePage() {
         <h2>About Us</h2>
         <p>
           River of Life is a non-governmental organization dedicated to protecting and
-          empowering vulnerable women and children in the Philippines. Operating under
+          empowering vulnerable women and children in Brazil. Operating under
           the guidelines of the Department of Social Welfare and Development (DSWD),
           we provide comprehensive care spanning shelter, psychosocial support,
           education, livelihood training, and family reintegration services.
@@ -61,7 +61,7 @@ export default function HomePage() {
         <h2>Where We Are Based</h2>
         <p>
           We are headquartered in Brazil, where our international team collaborates with local partners
-          to support survivors across multiple regions. Our network extends to the Philippines and beyond,
+          to support survivors across multiple regions. Our network extends throughout Brazil and beyond,
           allowing us to provide culturally sensitive and locally-informed care to vulnerable populations
           in underserved communities worldwide.
         </p>
