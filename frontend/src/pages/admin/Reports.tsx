@@ -4,6 +4,7 @@ import "../../styles/styles.css";
 import "../../styles/AdminDashboard.css";
 import apiClient from "../../api/apiClient";
 import { ENABLE_ML_PREDICTIONS } from "../../config/features";
+import { predictedDonationPhpToDisplayUsd } from "../../config/socialDonationDisplay";
 import { OKR_DEFINITIONS } from "../../config/okrTargets";
 import type {
   DonorRetentionPrediction,
@@ -197,11 +198,13 @@ export default function Reports() {
   const highIncidentRisk = incidentPredictions.filter(
     (p) => p.incidentRiskProbability >= 0.66,
   ).length;
-  const topSocialAvg = socialPredictions.length
-    ? socialPredictions.reduce(
-        (sum, p) => sum + p.predictedDonationValuePhp,
-        0,
-      ) / socialPredictions.length
+  const topSocialAvgUsd = socialPredictions.length
+    ? predictedDonationPhpToDisplayUsd(
+        socialPredictions.reduce(
+          (sum, p) => sum + p.predictedDonationValuePhp,
+          0,
+        ) / socialPredictions.length,
+      )
     : 0;
   const highLapseCount = donorPredictions.filter(
     (p) => p.lapseRiskProbability >= 0.66,
@@ -210,7 +213,7 @@ export default function Reports() {
     highLapseCount,
     highLowProgressCount: highProgressRisk,
     highIncidentCount: highIncidentRisk,
-    avgPredictedDonationUsd: topSocialAvg,
+    avgPredictedDonationUsd: topSocialAvgUsd,
   };
   const fmtMetric = (value: number, unit: "count" | "usd") =>
     unit === "usd" ? fmtUsd(value) : value.toLocaleString();
@@ -320,7 +323,8 @@ export default function Reports() {
       urgency: draftUrgency,
       impactStory: draftImpactStory,
     });
-    const value = knnValue * Math.exp(logM);
+    const valuePhp = knnValue * Math.exp(logM);
+    const value = predictedDonationPhpToDisplayUsd(valuePhp);
     return { value, source };
   }, [
     draftHasCta,
@@ -348,8 +352,8 @@ export default function Reports() {
           <h3>OKR Tracker (Target vs Actual)</h3>
           <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", marginTop: 0 }}>
             Current actuals use the latest scored prediction batch (same logic as the admin dashboard).
-            Dollar figures use the same numeric scale as the social donation model output, labeled in USD for
-            reporting.
+            Objective 4 converts model output from <strong>PHP</strong> (<code>predicted_donation_value_php</code>) to{" "}
+            <strong>approximate USD</strong> for presentation (~56 PHP/USD; planning constant).
           </p>
           <div className="metrics-grid" style={{ marginTop: "1rem" }}>
             {okrRows.map((row) => (
@@ -479,10 +483,9 @@ export default function Reports() {
         <div className="admin-card">
           <h3>Post Draft Scorer</h3>
           <p style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>
-            Planning aid for social media drafting. The amount starts from <strong>Pipeline 10</strong> batch
-            scores (<code>predicted_donation_value_php</code>) blended toward similar scored posts, then{" "}
-            <strong>each control below</strong> applies a strong log-scale adjustment so totals move by
-            thousands (same feature families as the notebook: platform, type, length, CTA, urgency, story).
+            Planning aid for social media drafting. The pipeline stores scores in <strong>PHP</strong>; we blend
+            batch predictions, apply draft controls, then convert to <strong>~USD</strong> (~56 PHP/USD) so amounts
+            match stakeholder expectations (not &quot;$22k USD per post&quot; misread from peso-scale numbers).
           </p>
           <div className="form-row">
             <div className="form-group">
@@ -551,7 +554,7 @@ export default function Reports() {
             <strong>Estimated Donation Potential:</strong> {draftPotential.tier} (
             {draftPotential.score}/100)
             <div style={{ marginTop: "0.35rem" }}>
-              <strong>Estimated Donation Amount (USD):</strong>{" "}
+              <strong>Estimated Donation Amount (~USD, from PHP model):</strong>{" "}
               {draftDonationFromPipeline.value != null
                 ? fmtUsd(draftDonationFromPipeline.value)
                 : "—"}
