@@ -67,6 +67,18 @@
   transform: translateY(-2px);
 }
 
+/* ─── Image Section ──────────────────────────────────────────────────── */
+.image-section {
+  width: 100%;
+  overflow: hidden;
+}
+
+.image-section img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
 /* ─── Impact Section ─────────────────────────────────────────────────── */
 .impact-section {
   padding: 3rem 2rem;

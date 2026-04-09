@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import Navbar from '../components/Navbar';
+import handsImage from '../assets/Hands.jpg';
 import '../styles/HomePage.css';
 
 export default function HomePage() {
@@ -34,6 +35,10 @@ export default function HomePage() {
           <button className="btn btn-primary" onClick={handleDonateClick}>Support Our Mission</button>
           <button className="btn btn-outline" onClick={() => navigate('/donor')}>View Our Impact</button>
         </div>
+      </section>
+
+      <section className="image-section">
+        <img src={handsImage} alt="girls walking down a hallway" />
       </section>
 
       <section className="about-section">
