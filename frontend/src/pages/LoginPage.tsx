@@ -1,14 +1,14 @@
-import { useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import { useAuth } from '../auth/AuthContext';
-import '../styles/LoginPage.css';
+import { useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import axios from "axios";
+import { useAuth } from "../auth/AuthContext";
+import "../styles/LoginPage.css";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const navigate = useNavigate();
   const location = useLocation();
   const { login } = useAuth();
@@ -16,10 +16,10 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
 
     if (!email || !password) {
-      setError('Please enter both email and password.');
+      setError("Please enter both email and password.");
       return;
     }
 
@@ -28,20 +28,20 @@ export default function LoginPage() {
       const user = await login(email.trim(), password);
 
       if (user.roleId === 2) {
-        navigate('/admin/dashboard');
+        navigate("/admin/dashboard");
       } else {
-        navigate('/donor/dashboard');
+        navigate("/donor/dashboard");
       }
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
         const status = err.response?.status;
         if (status === 401) {
-          setError('Login failed. Invalid email or password.');
+          setError("Login failed. Invalid email or password.");
         } else {
-          setError(`Login request failed (${status ?? 'network error'}).`);
+          setError(`Login request failed (${status ?? "network error"}).`);
         }
       } else {
-        setError('Login failed. Check your credentials and try again.');
+        setError("Login failed. Check your credentials and try again.");
       }
     } finally {
       setIsSubmitting(false);
@@ -57,11 +57,16 @@ export default function LoginPage() {
         </div>
 
         <form onSubmit={handleLogin} noValidate>
-          {prompt && <p style={{ color: '#1a4f9c', marginBottom: '0.75rem' }}>{prompt}</p>}
+          {prompt && (
+            <p style={{ color: "#1a4f9c", marginBottom: "0.75rem" }}>
+              {prompt}
+            </p>
+          )}
 
           <div className="form-group">
-            <label>Email</label>
+            <label htmlFor="login-email">Email</label>
             <input
+              id="login-email"
               type="text"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -70,8 +75,9 @@ export default function LoginPage() {
           </div>
 
           <div className="form-group">
-            <label>Password</label>
+            <label htmlFor="login-password">Password</label>
             <input
+              id="login-password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -79,17 +85,22 @@ export default function LoginPage() {
             />
           </div>
 
-          {error && <p style={{ color: '#c62828', marginBottom: '0.75rem' }}>{error}</p>}
+          {error && (
+            <p style={{ color: "#c62828", marginBottom: "0.75rem" }}>{error}</p>
+          )}
 
           <button type="submit" className="login-btn" disabled={isSubmitting}>
-            {isSubmitting ? 'Signing In...' : 'Sign In'}
+            {isSubmitting ? "Signing In..." : "Sign In"}
           </button>
         </form>
 
         <div className="login-footer">
           <p>Use your account credentials to continue.</p>
           <p>
-            Don't have an account? <Link className="auth-inline-link" to="/signup">Create one here!</Link>
+            Don't have an account?{" "}
+            <Link className="auth-inline-link" to="/signup">
+              Create one here!
+            </Link>
           </p>
         </div>
       </div>
