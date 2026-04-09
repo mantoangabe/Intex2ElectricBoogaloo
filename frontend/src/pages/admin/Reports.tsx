@@ -27,16 +27,12 @@ interface SafehouseMonthlyMetric {
   notes: string;
 }
 
-interface Resident {
-  residentId: number;
-  reintegrationStatus: string | null;
-}
-
 export default function Reports() {
   const DEFAULT_PAGE_SIZE = 5;
   const TOP_SOCIAL_POST_COUNT = 25;
+  const parsePageSize = (value: string, total: number) =>
+    value === "all" ? Math.max(total, 1) : Number(value);
   const [metrics, setMetrics] = useState<SafehouseMonthlyMetric[]>([]);
-  const [residents, setResidents] = useState<Resident[]>([]);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [totalCount, setTotalCount] = useState(0);
@@ -82,6 +78,7 @@ export default function Reports() {
   const [draftUrgency, setDraftUrgency] = useState(false);
   const [draftImpactStory, setDraftImpactStory] = useState(true);
   const [draftWordCount, setDraftWordCount] = useState(120);
+  const [refreshingSocial, setRefreshingSocial] = useState(false);
 
   const fetchMetrics = (pageVal: number, size: number) => {
     setLoading(true);
@@ -99,10 +96,6 @@ export default function Reports() {
   };
 
   useEffect(() => {
-    apiClient
-      .get<Resident[]>("/Residents", { params: { skip: 0, take: 1000 } })
-      .then((res) => setResidents(res.data))
-      .catch(() => {});
     fetchMetrics(1, pageSize);
     apiClient
       .get<SafehouseMonthlyMetric[]>("/SafehouseMonthlyMetrics", {
@@ -211,28 +204,28 @@ export default function Reports() {
       }
     }
   };
+  const refreshSocialPredictions = async () => {
+    setRefreshingSocial(true);
+    try {
+      await apiClient.post("/SocialDonationPredictions/refresh-demo");
+      const refreshed = await apiClient.get<SocialDonationPrediction[]>(
+        "/SocialDonationPredictions",
+        {
+          params: {
+            take: TOP_SOCIAL_POST_COUNT,
+            latestOnly: true,
+            sort: "value_desc",
+          },
+        },
+      );
+      setSocialPredictions(refreshed.data);
+    } catch {
+      alert("Failed to refresh social prediction scoring batch.");
+    } finally {
+      setRefreshingSocial(false);
+    }
+  };
 
-  const avgEducation = metrics.length
-    ? (
-        metrics.reduce((sum, m) => sum + (m.avgEducationProgress ?? 0), 0) /
-        metrics.length
-      ).toFixed(1)
-    : "—";
-
-  const avgHealth = metrics.length
-    ? (
-        metrics.reduce((sum, m) => sum + (m.avgHealthScore ?? 0), 0) /
-        metrics.length
-      ).toFixed(1)
-    : "—";
-
-  const reintegrationRate = residents.length
-    ? (
-        (residents.filter((r) => r.reintegrationStatus === "Completed").length /
-          residents.length) *
-        100
-      ).toFixed(1) + "%"
-    : "—";
   const highProgressRisk = progressPredictions.filter(
     (p) => p.lowProgressRiskProbability >= 0.66,
   ).length;
@@ -303,6 +296,8 @@ export default function Reports() {
       ? a.safehouseId - b.safehouseId
       : b.safehouseId - a.safehouseId,
   );
+  const pageSizeSelectValue =
+    totalCount > 0 && pageSize >= totalCount ? "all" : String(pageSize);
 
   return (
     <AdminLayout title="Reports & Analytics">
@@ -453,9 +448,9 @@ export default function Reports() {
             className="filter-select"
             style={{ marginLeft: "auto" }}
             aria-label="Items per page"
-            value={pageSize}
+            value={pageSizeSelectValue}
             onChange={(e) => {
-              const size = Number(e.target.value);
+              const size = parsePageSize(e.target.value, totalCount);
               setPageSize(size);
               setPage(1);
               fetchMetrics(1, size);
@@ -464,6 +459,9 @@ export default function Reports() {
             <option value={5}>5 / page</option>
             <option value={10}>10 / page</option>
             <option value={25}>25 / page</option>
+            <option value={50}>50 / page</option>
+            <option value={100}>100 / page</option>
+            <option value="all">All records</option>
           </select>
           <button
             className="btn btn-secondary btn-sm"
@@ -477,42 +475,6 @@ export default function Reports() {
             Next
           </button>
         </div>
-      </div>
-
-      <div className="admin-card">
-        <h3>Resident Outcomes</h3>
-        <table className="admin-table">
-          <thead>
-            <tr>
-              <th>Metric</th>
-              <th>Value</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Avg Education Progress</td>
-              <td>{avgEducation}</td>
-            </tr>
-            <tr>
-              <td>Avg Health Score</td>
-              <td>{avgHealth}</td>
-            </tr>
-            <tr>
-              <td>Reintegration Success Rate</td>
-              <td>{reintegrationRate}</td>
-            </tr>
-          </tbody>
-        </table>
-        <p
-          style={{
-            marginTop: "0.75rem",
-            fontSize: "0.8rem",
-            color: "var(--text-muted)",
-          }}
-        >
-          Context: Avg Education Progress and Avg Health Score are internal
-          0-100 normalized indicators (higher is better).
-        </p>
       </div>
 
       {ENABLE_ML_PREDICTIONS && (
@@ -648,7 +610,24 @@ export default function Reports() {
           </div>
 
           <div className="admin-card">
-            <h3>Top Predicted Social Donation Posts</h3>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <h3>Top Predicted Social Donation Posts</h3>
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={refreshSocialPredictions}
+                disabled={refreshingSocial}
+              >
+                {refreshingSocial
+                  ? "Refreshing scoring..."
+                  : "Run Social Scoring (No Redeploy)"}
+              </button>
+            </div>
             <table className="admin-table">
               <thead>
                 <tr>

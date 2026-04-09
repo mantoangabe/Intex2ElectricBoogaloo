@@ -22,6 +22,8 @@ interface ProcessRecording {
 
 export default function ProcessRecording() {
   const DEFAULT_PAGE_SIZE = 25;
+  const parsePageSize = (value: string, total: number) =>
+    value === "all" ? Math.max(total, 1) : Number(value);
   const [recordings, setRecordings] = useState<ProcessRecording[]>([]);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
@@ -127,6 +129,8 @@ export default function ProcessRecording() {
       }
     }
   };
+  const pageSizeSelectValue =
+    totalCount > 0 && pageSize >= totalCount ? "all" : String(pageSize);
 
   return (
     <AdminLayout title="Process Recording">
@@ -322,9 +326,9 @@ export default function ProcessRecording() {
             className="filter-select"
             style={{ marginLeft: "auto" }}
             aria-label="Items per page"
-            value={pageSize}
+            value={pageSizeSelectValue}
             onChange={(e) => {
-              const size = Number(e.target.value);
+              const size = parsePageSize(e.target.value, totalCount);
               setPageSize(size);
               setPage(1);
               fetchRecordings(1, size);
@@ -333,6 +337,8 @@ export default function ProcessRecording() {
             <option value={10}>10 / page</option>
             <option value={25}>25 / page</option>
             <option value={50}>50 / page</option>
+            <option value={100}>100 / page</option>
+            <option value="all">All records</option>
           </select>
           <button
             className="btn btn-secondary btn-sm"
