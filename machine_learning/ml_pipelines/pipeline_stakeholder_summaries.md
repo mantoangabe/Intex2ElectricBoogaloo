@@ -6,6 +6,8 @@
 
 This document summarizes **four** upgraded analytics pipelines: what problem they address, what the models do, what we learned at a high level, and **why it matters** for mission and operations.
 
+**Application note:** Trained scores are loaded into the **PostgreSQL** prediction tables and surfaced through the **.NET API** and **admin UI** (dashboard and reports). Counts and averages use the **latest scored batch** (`scored_at`) unless otherwise noted. Leadership views may label donation-related figures in **USD** for planning consistency; the underlying stored column remains **`predicted_donation_value_php`** (same numeric scale as the model—**not** a foreign-exchange conversion in the app).
+
 ---
 
 ## At a glance
@@ -39,6 +41,9 @@ Help the organization **prioritize stewardship** when time is limited: identify 
 - Retention is typically **cheaper than acquisition**; a ranked list turns “we should steward donors” into a **weekly workflow**.
 - Outputs can feed a **stewardship queue** in internal systems—always as **decision support**, not an automated judgment about people.
 
+### In the admin application
+- The **dashboard** and **reports** can show how many supporters sit in a **high lapse-risk band** (e.g. probability above an agreed cutoff such as **0.66**) from the **latest** donor-retention batch—useful as a **queue size**, not a verdict on any individual.
+
 ### Presentation line
 *“We score which donors look most likely to go quiet in the next quarter so development can focus calls and emails where early outreach protects relationships and revenue.”*
 
@@ -63,6 +68,9 @@ Support **case managers** in deciding **where to focus** education and wellbeing
 - Moves response from **purely reactive** to **prioritized proactive** check-ins when patterns in the case file resemble past slip periods.
 - Must remain **internal decision support**—professional judgment and **dignity** for residents stay primary.
 
+### In the admin application
+- **Dashboard / reports** may display a count of residents in a **high “low progress” risk** band (same latest batch, cutoff such as **≥ 0.66**) to size **case-management** follow-up—not to label a child.
+
 ### Presentation line
 *“We help teams see which young people’s recent school and case patterns resemble months that later struggled—so managers can schedule reviews and supports before grades or wellbeing slip.”*
 
@@ -86,6 +94,9 @@ Give **safety and supervision** a **data-grounded watchlist**: estimate whether 
 - Supports **huddles and staffing focus** when time is finite; **false negatives** are safety-sensitive, so thresholds and process must be chosen with care.
 - **Never** replaces mandatory reporting, policy, or human judgment.
 
+### In the admin application
+- **Dashboard / reports** may show how many residents fall in a **high incident-risk** band for the **60-day** horizon (latest batch, e.g. **≥ 0.66**) to focus **safety** attention—alongside policy, not instead of it.
+
 ### Presentation line
 *“We rank which cases’ recent records look most like past months that saw incidents—so supervisors can focus attention and prevention, not replace safety protocols.”*
 
@@ -102,6 +113,7 @@ Align social strategy with **fundraising**, not vanity metrics: estimate which *
 - **Classification:** probability of **any attributed donation traction**; **regression** on **log scale** for rough **PHP ranking** of expected lift.
 - **Random forest** for performance, **logistic regression** for interpretable drivers; **dummy baseline** to prove lift over chance.
 - **Stratified splits**, **pipeline imputation/scaling**, and **threshold tables** for operational tradeoffs.
+- Batch scoring writes **`predicted_donation_value_php`** (and often **`p_high_conversion`**) per post for downstream tools; see `prediction_columns_handoff.md`.
 
 ### What we explain (not causal)
 - Coefficients and importances support **creative briefs** (e.g. donate links, fundraising post types, CTAs)—with honesty about **platform mix**, **boost spend**, and **campaign confounding**.
@@ -109,6 +121,11 @@ Align social strategy with **fundraising**, not vanity metrics: estimate which *
 ### Why it matters to the organization
 - Reduces **random posting**; helps **fundraising and comms** agree on **what to test** (formats, CTAs, timing) tied to **mission revenue**, not only engagement.
 - **Internal use only**; ethics around **urgency** and **storytelling** stay explicit.
+
+### In the admin application
+- **Dashboard:** summarizes **mean predicted donation** over the **top N** posts by predicted value (latest batch), plus how many of those posts show **high conversion probability**—aligned with OKR-style “impact from social content.”
+- **Reports & OKRs:** objective-level **target vs actual** uses the **same latest batch** metrics as the dashboard (leadership-configured baselines/targets in software).
+- **Post Draft Scorer (reports):** does **not** re-run the Python `joblib` model in the browser. It starts from **blended** `predicted_donation_value_php` for scored posts **similar** to the draft (platform, post type, word count, CTA, resident story), then applies a **strong log-scale adjustment** so **every** control (including **urgency language**) visibly moves both the **dollar estimate** and the **0–100 potential** score—aligned with Pipeline 10 feature families. If post metadata is missing for blending, the UI starts from the **batch mean** and says so.
 
 ### Presentation line
 *“We score draft posts by traits we can choose before publish—channel, ask, story cues, timing—against which historical posts actually showed attributed gifts, so marketing invests in content patterns tied to donations, not just likes.”*
@@ -120,7 +137,8 @@ Align social strategy with **fundraising**, not vanity metrics: estimate which *
 1. **Decision support, not automation** — Every pipeline is built to **inform** staff workflows; none replaces ethics, law, or professional judgment.
 2. **Honest evaluation** — Grouped or stratified validation, **leakage-aware preprocessing**, and **baseline comparisons** are standard so we do not over-promise accuracy.
 3. **Prediction vs explanation** — Tree models and tuned scores support **operations**; linear/logistic views support **transparency and training**; **causal claims** are deliberately limited.
-4. **Deployment path** — Notebooks reference **artifacts** (e.g. `.joblib`) and **database/UI** patterns so engineering can wire scores into the **.NET** environment when ready.
+4. **Deployment path** — Notebooks produce **artifacts** (e.g. `.joblib`); batch jobs or seed flows write predictions to **PostgreSQL**; the **ASP.NET Core** API exposes them to the **React** admin app with **`model_version`** and **`scored_at`** for traceability.
+5. **Thresholds in the UI** — “High risk” **counts** on the dashboard use an **agreed probability cutoff** (e.g. 0.66) on the **latest** batch; this is a **workflow sizing** choice, not a universal clinical or legal standard.
 
 ---
 
@@ -132,4 +150,4 @@ Align social strategy with **fundraising**, not vanity metrics: estimate which *
 
 ---
 
-*Last aligned with notebook upgrades: donor retention, resident progress, incident risk, and social media (donation-focused) pipelines.*
+*Last updated: aligns stakeholder narrative with notebook methodology plus current admin UI surfacing (dashboard, reports, OKRs, draft scorer with explicit per-control swings, USD labeling note for donation metrics).*

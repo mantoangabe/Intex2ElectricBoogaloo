@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import AdminLayout from "../../components/AdminLayout";
 import "../../styles/styles.css";
 import "../../styles/AdminDashboard.css";
@@ -12,47 +12,9 @@ import type {
   SocialDonationPrediction,
 } from "../../types/predictions";
 
-interface SafehouseMonthlyMetric {
-  metricId: number;
-  safehouseId: number;
-  monthStart: string;
-  monthEnd: string;
-  activeResidents: number;
-  avgEducationProgress: number | null;
-  avgHealthScore: number | null;
-  processRecordingCount: number;
-  homeVisitationCount: number;
-  incidentCount: number;
-  notes: string;
-}
-
-interface SafehouseMonthSummary {
-  safehouseId: number;
-  safehouseName: string;
-  monthStart: string;
-  monthEnd: string;
-  metricId: number | null;
-  activeResidents: number;
-  avgEducationProgress: number | null;
-  avgHealthScore: number | null;
-}
-
 const PREDICTION_TAKE = 50000;
 /** Top posts by predicted value — larger set improves draft similarity blend; same slice feeds OKR actual. */
 const TOP_SOCIAL_POST_COUNT = 100;
-/** Pull enough rows to list every distinct MonthStart present in the DB. */
-const DISTINCT_METRICS_TAKE = 100000;
-
-function normalizeMonthKey(iso: string): string {
-  return iso.slice(0, 10);
-}
-
-function formatMonthOptionLabel(yyyyMmDd: string): string {
-  return new Date(`${yyyyMmDd}T12:00:00`).toLocaleDateString("en-US", {
-    month: "long",
-    year: "numeric",
-  });
-}
 
 /** Post fields used for similarity to Pipeline 10 pre-publish features (see social_media_engagement.ipynb). */
 interface SocialMediaPostForDraft {
@@ -119,14 +81,52 @@ function estimateDonationFromSimilarScoredPosts(
   return { value: pSum / wSum, source: "similar-posts" };
 }
 
-export default function Reports() {
-  const [monthSummary, setMonthSummary] = useState<SafehouseMonthSummary[]>([]);
-  const [availableMonthKeys, setAvailableMonthKeys] = useState<string[]>([]);
-  const [selectedMonthKey, setSelectedMonthKey] = useState<string | null>(null);
-  const [monthsCatalogLoading, setMonthsCatalogLoading] = useState(true);
-  const [summaryLoading, setSummaryLoading] = useState(false);
-  const [summaryError, setSummaryError] = useState<string | null>(null);
+/**
+ * Strong, explicit swings from each draft control (log-scale on money so ~$25k moves by thousands).
+ * Aligns with Pipeline 10 feature families (platform, post_type, word_count, CTA, urgency/story language).
+ */
+function draftContentLogMultiplier(d: {
+  platform: string;
+  postType: string;
+  wordCount: number;
+  hasCta: boolean;
+  urgency: boolean;
+  impactStory: boolean;
+}): { logM: number; scorePoints: number } {
+  const p = d.platform.trim().toLowerCase();
+  let logM = 0;
+  if (p === "instagram") logM += 0.1;
+  else if (p === "facebook") logM += 0.045;
+  else if (p === "whatsapp") logM -= 0.085;
 
+  const t = d.postType.trim().toLowerCase();
+  if (t === "fundraisingappeal") logM += 0.13;
+  else if (t === "awareness") logM += 0.025;
+  else if (t === "update") logM -= 0.095;
+
+  const ideal = 155;
+  const sigma = 46;
+  const wordBell = Math.exp(
+    -((d.wordCount - ideal) ** 2) / (2 * sigma * sigma),
+  );
+  logM += -0.11 + 0.22 * wordBell;
+
+  logM += d.hasCta ? 0.095 : -0.11;
+  logM += d.urgency ? 0.075 : -0.055;
+  logM += d.impactStory ? 0.085 : -0.095;
+
+  const scorePoints =
+    (p === "instagram" ? 14 : p === "facebook" ? 7 : -12) +
+    (t === "fundraisingappeal" ? 18 : t === "awareness" ? 5 : -12) +
+    Math.round(18 * wordBell - 8) +
+    (d.hasCta ? 14 : -12) +
+    (d.urgency ? 11 : -8) +
+    (d.impactStory ? 13 : -11);
+
+  return { logM, scorePoints };
+}
+
+export default function Reports() {
   const [progressPredictions, setProgressPredictions] = useState<
     ResidentProgressPrediction[]
   >([]);
@@ -143,71 +143,12 @@ export default function Reports() {
     DonorRetentionPrediction[]
   >([]);
 
-  const [showModal, setShowModal] = useState(false);
-  const [editMetric, setEditMetric] = useState<SafehouseMonthlyMetric | null>(
-    null,
-  );
-  const [formData, setFormData] = useState<Partial<SafehouseMonthlyMetric>>({});
-  const [saving, setSaving] = useState(false);
   const [draftPlatform, setDraftPlatform] = useState("Facebook");
   const [draftPostType, setDraftPostType] = useState("FundraisingAppeal");
   const [draftHasCta, setDraftHasCta] = useState(true);
   const [draftUrgency, setDraftUrgency] = useState(false);
   const [draftImpactStory, setDraftImpactStory] = useState(true);
   const [draftWordCount, setDraftWordCount] = useState(120);
-
-  const loadAvailableMonths = useCallback((): Promise<string[]> => {
-    setMonthsCatalogLoading(true);
-    return apiClient
-      .get<SafehouseMonthlyMetric[]>("/SafehouseMonthlyMetrics", {
-        params: { skip: 0, take: DISTINCT_METRICS_TAKE },
-      })
-      .then((res) => {
-        const keys = [
-          ...new Set(res.data.map((r) => normalizeMonthKey(r.monthStart))),
-        ].sort((a, b) => b.localeCompare(a));
-        setAvailableMonthKeys(keys);
-        setSelectedMonthKey((prev) => {
-          if (prev && keys.includes(prev)) return prev;
-          return keys[0] ?? null;
-        });
-        return keys;
-      })
-      .catch(() => {
-        setAvailableMonthKeys([]);
-        setSelectedMonthKey(null);
-        return [];
-      })
-      .finally(() => setMonthsCatalogLoading(false));
-  }, []);
-
-  useEffect(() => {
-    loadAvailableMonths();
-  }, [loadAvailableMonths]);
-
-  const loadMonthSummary = useCallback(() => {
-    if (!selectedMonthKey) {
-      setMonthSummary([]);
-      return;
-    }
-    setSummaryLoading(true);
-    apiClient
-      .get<SafehouseMonthSummary[]>("/SafehouseMonthlyMetrics/month-summary", {
-        params: { monthStart: selectedMonthKey },
-      })
-      .then((res) => {
-        setMonthSummary(res.data);
-        setSummaryError(null);
-      })
-      .catch(() =>
-        setSummaryError("Failed to load safehouse metrics for this month."),
-      )
-      .finally(() => setSummaryLoading(false));
-  }, [selectedMonthKey]);
-
-  useEffect(() => {
-    loadMonthSummary();
-  }, [loadMonthSummary]);
 
   useEffect(() => {
     if (!ENABLE_ML_PREDICTIONS) return;
@@ -250,99 +191,6 @@ export default function Reports() {
   const fmtUsd = (value: number) =>
     `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-  const openModal = (metric: SafehouseMonthlyMetric | null) => {
-    setEditMetric(metric);
-    setFormData(metric ? { ...metric } : {});
-    setShowModal(true);
-  };
-
-  const closeModal = () => {
-    setShowModal(false);
-    setEditMetric(null);
-    setFormData({});
-  };
-
-  const openEditByMetricId = async (metricId: number) => {
-    try {
-      const res = await apiClient.get<SafehouseMonthlyMetric>(
-        `/SafehouseMonthlyMetrics/${metricId}`,
-      );
-      openModal(res.data);
-    } catch {
-      alert("Failed to load metric.");
-    }
-  };
-
-  const openCreateForSafehouse = (safehouseId: number) => {
-    if (!selectedMonthKey) return;
-    const [y, m] = selectedMonthKey.split("-").map(Number);
-    const pad = (n: number) => String(n).padStart(2, "0");
-    const monthStart = selectedMonthKey;
-    const lastDay = new Date(y, m, 0).getDate();
-    const monthEnd = `${y}-${pad(m)}-${pad(lastDay)}`;
-    setEditMetric(null);
-    setFormData({
-      safehouseId,
-      monthStart,
-      monthEnd,
-      activeResidents: 0,
-      processRecordingCount: 0,
-      homeVisitationCount: 0,
-      incidentCount: 0,
-      notes: "",
-    });
-    setShowModal(true);
-  };
-
-  const saveMetric = async () => {
-    setSaving(true);
-    try {
-      if (editMetric?.metricId) {
-        await apiClient.put(
-          `/SafehouseMonthlyMetrics/${editMetric.metricId}`,
-          formData,
-        );
-      } else {
-        await apiClient.post("/SafehouseMonthlyMetrics", formData);
-      }
-      await loadAvailableMonths();
-      const summaryKey =
-        formData.monthStart != null
-          ? normalizeMonthKey(formData.monthStart)
-          : selectedMonthKey;
-      if (summaryKey) {
-        setSummaryLoading(true);
-        const sum = await apiClient.get<SafehouseMonthSummary[]>(
-          "/SafehouseMonthlyMetrics/month-summary",
-          { params: { monthStart: summaryKey } },
-        );
-        setMonthSummary(sum.data);
-        setSummaryError(null);
-        setSelectedMonthKey(summaryKey);
-      } else {
-        loadMonthSummary();
-      }
-      closeModal();
-    } catch {
-      alert("Failed to save metric.");
-    } finally {
-      setSaving(false);
-      setSummaryLoading(false);
-    }
-  };
-
-  const deleteMetric = async (id: number) => {
-    if (window.confirm("Delete this metric?")) {
-      try {
-        await apiClient.delete(`/SafehouseMonthlyMetrics/${id}`);
-        await loadAvailableMonths();
-        loadMonthSummary();
-      } catch {
-        alert("Failed to delete metric.");
-      }
-    }
-  };
-
   const highProgressRisk = progressPredictions.filter(
     (p) => p.lowProgressRiskProbability >= 0.66,
   ).length;
@@ -383,28 +231,39 @@ export default function Reports() {
     return { ...def, actual, progress, variance, status };
   });
 
-  const draftScore = (() => {
-    let score = 45;
-    if (draftPlatform === "Facebook") score += 6;
-    if (draftPlatform === "Instagram") score += 8;
-    if (draftPostType === "FundraisingAppeal") score += 12;
-    if (draftHasCta) score += 10;
-    if (draftUrgency) score += 8;
-    if (draftImpactStory) score += 10;
-    if (draftWordCount >= 80 && draftWordCount <= 220) score += 8;
-    if (draftWordCount < 40 || draftWordCount > 320) score -= 7;
-    return Math.max(0, Math.min(100, score));
-  })();
-  const draftTier =
-    draftScore >= 80
-      ? "High potential"
-      : draftScore >= 60
-        ? "Moderate potential"
-        : "Needs revision";
+  const draftPotential = useMemo(() => {
+    const { scorePoints } = draftContentLogMultiplier({
+      platform: draftPlatform,
+      postType: draftPostType,
+      wordCount: draftWordCount,
+      hasCta: draftHasCta,
+      urgency: draftUrgency,
+      impactStory: draftImpactStory,
+    });
+    const score = Math.max(0, Math.min(100, 50 + scorePoints));
+    const tier =
+      score >= 78
+        ? "High potential"
+        : score >= 52
+          ? "Moderate potential"
+          : "Needs revision";
+    return { score, tier };
+  }, [
+    draftHasCta,
+    draftImpactStory,
+    draftPlatform,
+    draftPostType,
+    draftUrgency,
+    draftWordCount,
+  ]);
+
   const draftActions = [
     !draftHasCta
       ? "Add a direct donation CTA with a clear next step."
       : "Keep CTA prominent in the first 2 lines.",
+    !draftUrgency
+      ? "Consider measured urgency language where appropriate for time-bound campaigns."
+      : "Keep urgency truthful and tied to real deadlines or needs.",
     !draftImpactStory
       ? "Include a concise resident impact story to increase emotional resonance."
       : "Keep the impact story concrete with one measurable outcome.",
@@ -442,7 +301,7 @@ export default function Reports() {
       .filter(
         (x): x is { post: SocialMediaPostForDraft; pred: number } => x != null,
       );
-    const { value, source } = estimateDonationFromSimilarScoredPosts(
+    const { value: knnValue, source } = estimateDonationFromSimilarScoredPosts(
       {
         platform: draftPlatform,
         postType: draftPostType,
@@ -453,21 +312,27 @@ export default function Reports() {
       neighbors,
       socialBatchMean,
     );
+    const { logM } = draftContentLogMultiplier({
+      platform: draftPlatform,
+      postType: draftPostType,
+      wordCount: draftWordCount,
+      hasCta: draftHasCta,
+      urgency: draftUrgency,
+      impactStory: draftImpactStory,
+    });
+    const value = knnValue * Math.exp(logM);
     return { value, source };
   }, [
     draftHasCta,
     draftImpactStory,
     draftPlatform,
     draftPostType,
+    draftUrgency,
     draftWordCount,
     postById,
     socialBatchMean,
     socialPredictions,
   ]);
-
-  const monthLabel = selectedMonthKey
-    ? formatMonthOptionLabel(selectedMonthKey)
-    : "";
 
   return (
     <AdminLayout title="Reports & Analytics">
@@ -476,9 +341,6 @@ export default function Reports() {
           <h2>Reports & Analytics</h2>
           <p>Insights and trends to support decision-making</p>
         </div>
-        <button className="btn btn-primary" onClick={() => openModal(null)}>
-          + Add Metric
-        </button>
       </div>
 
       {ENABLE_ML_PREDICTIONS && (
@@ -527,12 +389,27 @@ export default function Reports() {
                   <dd style={{ margin: 0 }}>{fmtMetric(row.target, row.unit)}</dd>
                 </dl>
                 <div
-                  className="metric-value"
-                  style={{ fontSize: "1.85rem", marginTop: "0.75rem" }}
+                  style={{
+                    marginTop: "0.75rem",
+                    display: "flex",
+                    alignItems: "baseline",
+                    gap: "0.5rem",
+                    flexWrap: "wrap",
+                  }}
                 >
-                  {fmtMetric(row.actual, row.unit)}
+                  <span
+                    className="metric-label"
+                    style={{ margin: 0, fontWeight: 700 }}
+                  >
+                    Actual:
+                  </span>
+                  <span
+                    className="metric-value"
+                    style={{ fontSize: "1.85rem", margin: 0, lineHeight: 1.15 }}
+                  >
+                    {fmtMetric(row.actual, row.unit)}
+                  </span>
                 </div>
-                <div className="metric-label">Actual</div>
                 <div style={{ marginTop: "0.5rem", fontSize: "0.88rem" }}>
                   <span style={{ color: "var(--text-muted)" }}>Variance: </span>
                   <strong>{fmtVariance(row.variance, row.unit)}</strong>
@@ -602,9 +479,10 @@ export default function Reports() {
         <div className="admin-card">
           <h3>Post Draft Scorer</h3>
           <p style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>
-            Planning aid for social media drafting. The dollar estimate below reuses this page&apos;s{" "}
-            <strong>Pipeline 10</strong> batch scores (<code>predicted_donation_value_php</code>), weighted
-            toward scored posts with similar pre-publish attributes — not a hand-tuned multiplier.
+            Planning aid for social media drafting. The amount starts from <strong>Pipeline 10</strong> batch
+            scores (<code>predicted_donation_value_php</code>) blended toward similar scored posts, then{" "}
+            <strong>each control below</strong> applies a strong log-scale adjustment so totals move by
+            thousands (same feature families as the notebook: platform, type, length, CTA, urgency, story).
           </p>
           <div className="form-row">
             <div className="form-group">
@@ -670,8 +548,8 @@ export default function Reports() {
             </label>
           </div>
           <div style={{ marginTop: "0.9rem" }}>
-            <strong>Estimated Donation Potential:</strong> {draftTier} (
-            {draftScore}/100)
+            <strong>Estimated Donation Potential:</strong> {draftPotential.tier} (
+            {draftPotential.score}/100)
             <div style={{ marginTop: "0.35rem" }}>
               <strong>Estimated Donation Amount (USD):</strong>{" "}
               {draftDonationFromPipeline.value != null
@@ -687,9 +565,9 @@ export default function Reports() {
               }}
             >
               {draftDonationFromPipeline.source === "similar-posts" &&
-                "Weighted blend of ML predictions for scored posts closest to your draft (platform, post type, word count, CTA, resident story). Does not re-execute the Python model in the browser."}
+                "Base = weighted ML predictions from scored posts similar to your draft; then large swings from every dropdown/checkbox (platform through impact story). Does not re-run the Python joblib in the browser."}
               {draftDonationFromPipeline.source === "batch-mean" &&
-                "Mean predicted value for the current top-posts batch — post rows were unavailable to match similar content, so similarity weighting fell back to the batch average."}
+                "Base = batch mean (post rows missing for similarity); controls still apply full dollar and score adjustments."}
               {draftDonationFromPipeline.source === "none" &&
                 "No social donation predictions loaded — enable ML predictions or refresh the batch to see an estimate."}
             </p>
@@ -698,303 +576,6 @@ export default function Reports() {
                 <li key={a}>{a}</li>
               ))}
             </ul>
-          </div>
-        </div>
-      )}
-
-      <div className="admin-card">
-        <h3>Safehouse Monthly Metrics</h3>
-        <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", marginTop: 0 }}>
-          One row per safehouse for the month you select. Education and health averages use stored
-          monthly values when present; otherwise they are computed from education and health records
-          dated in that month. Active residents use the stored count when a row exists, otherwise an
-          estimate from admission and closure dates.
-        </p>
-        <div
-          className="filter-bar"
-          style={{ marginTop: "0.75rem", flexWrap: "wrap", alignItems: "center" }}
-        >
-          <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", flex: "1 1 220px" }}>
-            <span style={{ color: "var(--text-muted)", fontSize: "0.9rem", whiteSpace: "nowrap" }}>
-              Reporting period
-            </span>
-            <select
-              className="filter-select"
-              style={{ flex: 1, minWidth: 200 }}
-              value={selectedMonthKey ?? ""}
-              onChange={(e) => setSelectedMonthKey(e.target.value || null)}
-              disabled={monthsCatalogLoading || availableMonthKeys.length === 0}
-              aria-label="Reporting period month"
-            >
-              {availableMonthKeys.length === 0 ? (
-                <option value="">No periods in database yet</option>
-              ) : (
-                availableMonthKeys.map((k) => (
-                  <option key={k} value={k}>
-                    {formatMonthOptionLabel(k)}
-                  </option>
-                ))
-              )}
-            </select>
-          </label>
-          <span className="refresh-chip" style={{ marginLeft: "auto" }}>
-            {monthsCatalogLoading || summaryLoading ? "Loading…" : monthLabel || "—"}
-          </span>
-        </div>
-        {!monthsCatalogLoading && availableMonthKeys.length === 0 && (
-          <p style={{ color: "var(--text-muted)", fontSize: "0.88rem", marginTop: "0.75rem" }}>
-            No monthly metric rows exist yet. Use <strong>+ Add Metric</strong> to create a period; it will
-            appear in this list.
-          </p>
-        )}
-
-        <table className="admin-table" style={{ marginTop: "1rem" }}>
-          <thead>
-            <tr>
-              <th>Safehouse</th>
-              <th>Active residents</th>
-              <th>Avg education progress (%)</th>
-              <th>Avg health score</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {summaryError && (
-              <tr>
-                <td colSpan={5} className="placeholder-row">
-                  {summaryError}
-                </td>
-              </tr>
-            )}
-            {!summaryError && monthSummary.length === 0 && !summaryLoading && (
-              <tr>
-                <td colSpan={5} className="placeholder-row">
-                  No safehouses found.
-                </td>
-              </tr>
-            )}
-            {monthSummary.map((row) => (
-              <tr key={row.safehouseId}>
-                <td>
-                  <strong>{row.safehouseName}</strong>
-                  <div style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
-                    ID {row.safehouseId}
-                  </div>
-                </td>
-                <td>{row.activeResidents}</td>
-                <td>
-                  {row.avgEducationProgress != null
-                    ? Number(row.avgEducationProgress).toFixed(1)
-                    : "—"}
-                </td>
-                <td>
-                  {row.avgHealthScore != null
-                    ? Number(row.avgHealthScore).toFixed(2)
-                    : "—"}
-                </td>
-                <td style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-                  {row.metricId != null ? (
-                    <>
-                      <button
-                        type="button"
-                        className="btn btn-sm btn-secondary"
-                        onClick={() => openEditByMetricId(row.metricId!)}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-sm btn-danger"
-                        onClick={() => deleteMetric(row.metricId!)}
-                      >
-                        Delete
-                      </button>
-                    </>
-                  ) : (
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-secondary"
-                      onClick={() => openCreateForSafehouse(row.safehouseId)}
-                    >
-                      Add record
-                    </button>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {showModal && (
-        <div className="modal-overlay" onClick={closeModal}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>{editMetric ? "Edit Metric" : "Add Metric"}</h3>
-              <button className="modal-close" onClick={closeModal}>
-                ×
-              </button>
-            </div>
-            <div>
-              <div className="form-group">
-                <label htmlFor="reports-safehouse-id">Safehouse ID</label>
-                <input
-                  id="reports-safehouse-id"
-                  type="number"
-                  value={formData.safehouseId ?? ""}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      safehouseId: parseInt(e.target.value, 10) || 0,
-                    })
-                  }
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="reports-month-start">Month Start</label>
-                <input
-                  id="reports-month-start"
-                  type="date"
-                  value={formData.monthStart?.split("T")[0] ?? ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, monthStart: e.target.value })
-                  }
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="reports-month-end">Month End</label>
-                <input
-                  id="reports-month-end"
-                  type="date"
-                  value={formData.monthEnd?.split("T")[0] ?? ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, monthEnd: e.target.value })
-                  }
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="reports-active-residents">
-                  Active Residents
-                </label>
-                <input
-                  id="reports-active-residents"
-                  type="number"
-                  value={formData.activeResidents ?? ""}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      activeResidents: parseInt(e.target.value, 10) || 0,
-                    })
-                  }
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="reports-avg-education-progress">
-                  Avg Education Progress
-                </label>
-                <input
-                  id="reports-avg-education-progress"
-                  type="number"
-                  step="0.01"
-                  value={formData.avgEducationProgress ?? ""}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      avgEducationProgress: parseFloat(e.target.value) || null,
-                    })
-                  }
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="reports-avg-health-score">
-                  Avg Health Score
-                </label>
-                <input
-                  id="reports-avg-health-score"
-                  type="number"
-                  step="0.01"
-                  value={formData.avgHealthScore ?? ""}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      avgHealthScore: parseFloat(e.target.value) || null,
-                    })
-                  }
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="reports-process-recording-count">
-                  Process Recording Count
-                </label>
-                <input
-                  id="reports-process-recording-count"
-                  type="number"
-                  value={formData.processRecordingCount ?? ""}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      processRecordingCount: parseInt(e.target.value, 10) || 0,
-                    })
-                  }
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="reports-home-visitation-count">
-                  Home Visitation Count
-                </label>
-                <input
-                  id="reports-home-visitation-count"
-                  type="number"
-                  value={formData.homeVisitationCount ?? ""}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      homeVisitationCount: parseInt(e.target.value, 10) || 0,
-                    })
-                  }
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="reports-incident-count">Incident Count</label>
-                <input
-                  id="reports-incident-count"
-                  type="number"
-                  value={formData.incidentCount ?? ""}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      incidentCount: parseInt(e.target.value, 10) || 0,
-                    })
-                  }
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="reports-notes">Notes</label>
-                <textarea
-                  id="reports-notes"
-                  value={formData.notes ?? ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, notes: e.target.value })
-                  }
-                />
-              </div>
-            </div>
-            <div className="modal-footer">
-              <button
-                className="btn btn-secondary"
-                onClick={closeModal}
-                disabled={saving}
-              >
-                Cancel
-              </button>
-              <button
-                className="btn btn-primary"
-                onClick={saveMetric}
-                disabled={saving}
-              >
-                {saving ? "Saving..." : "Save"}
-              </button>
-            </div>
           </div>
         </div>
       )}
