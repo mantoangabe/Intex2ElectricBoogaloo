@@ -30,10 +30,6 @@ export default function HomePage() {
         style={{ '--hero-bg': `url(${jumpImage})` } as React.CSSProperties}
       >
         <h1>Restoring Hope, Rebuilding Lives</h1>
-        <p>
-          We provide safe shelter, healing programs, and reintegration support
-          for survivors of trafficking and abuse across the Philippines.
-        </p>
         <div className="hero-buttons">
           <button className="btn btn-primary" onClick={handleDonateClick}>Support Our Mission</button>
           <button className="btn btn-outline" onClick={() => navigate('/donor')}>View Our Impact</button>
