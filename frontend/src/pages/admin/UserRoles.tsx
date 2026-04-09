@@ -15,14 +15,38 @@ export default function UserRoles() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savingUserId, setSavingUserId] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalCount, setTotalCount] = useState(0);
 
   const loadUsers = async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const response = await apiClient.get<AdminUser[]>('/Auth/admin/users');
-      setUsers(response.data);
+      const trimmedSearch = searchTerm.trim();
+      const userParams: Record<string, string | number> = {
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      };
+
+      if (trimmedSearch) {
+        userParams.search = trimmedSearch;
+      }
+
+      const countParams: Record<string, string> = {};
+      if (trimmedSearch) {
+        countParams.search = trimmedSearch;
+      }
+
+      const [usersResponse, countResponse] = await Promise.all([
+        apiClient.get<AdminUser[]>('/Auth/admin/users', { params: userParams }),
+        apiClient.get<number>('/Auth/admin/users/count', { params: countParams }),
+      ]);
+
+      setTotalCount(countResponse.data);
+      setUsers(usersResponse.data);
     } catch {
       setError('Failed to load user accounts.');
     } finally {
@@ -32,7 +56,7 @@ export default function UserRoles() {
 
   useEffect(() => {
     void loadUsers();
-  }, []);
+  }, [page, pageSize, searchTerm]);
 
   const updateRole = async (user: AdminUser) => {
     const targetRole = user.roleId === 1 ? 'Admin' : 'Donor';
@@ -71,9 +95,22 @@ export default function UserRoles() {
       </div>
 
       <div className="admin-card">
+        <div className="filter-bar" style={{ marginBottom: '1rem' }}>
+          <input
+            type="text"
+            className="filter-input"
+            placeholder="Search by email..."
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setPage(1);
+            }}
+          />
+        </div>
+
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h3>Accounts</h3>
-          <small className="refresh-chip">{users.length} total</small>
+          <small className="refresh-chip">Showing {users.length} of {totalCount} records</small>
         </div>
 
         <table className="admin-table">
@@ -127,6 +164,37 @@ export default function UserRoles() {
             ))}
           </tbody>
         </table>
+
+        <div className="pagination-row">
+          <button
+            className="btn btn-secondary btn-sm"
+            disabled={page === 1 || loading}
+            onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+          >
+            Previous
+          </button>
+          <span>Page {page} of {Math.max(1, Math.ceil(totalCount / pageSize))}</span>
+          <button
+            className="btn btn-secondary btn-sm"
+            disabled={page >= Math.max(1, Math.ceil(totalCount / pageSize)) || loading}
+            onClick={() => setPage((prev) => prev + 1)}
+          >
+            Next
+          </button>
+          <select
+            className="filter-select"
+            style={{ marginLeft: 'auto' }}
+            value={pageSize}
+            onChange={(e) => {
+              setPageSize(Number(e.target.value));
+              setPage(1);
+            }}
+          >
+            <option value={10}>10 / page</option>
+            <option value={25}>25 / page</option>
+            <option value={50}>50 / page</option>
+          </select>
+        </div>
       </div>
     </AdminLayout>
   );

@@ -180,10 +180,27 @@ public class AuthController : ControllerBase
 
     [HttpGet("admin/users")]
     [Authorize(Roles = "Admin")]
-    public async Task<IActionResult> GetUsersForAdmin()
+    public async Task<IActionResult> GetUsersForAdmin(
+        [FromQuery] string? search = null,
+        [FromQuery] int skip = 0,
+        [FromQuery] int take = 25)
     {
-        var users = await _userManager.Users
+        if (skip < 0) skip = 0;
+        if (take <= 0) take = 25;
+
+        var query = _userManager.Users.AsNoTracking();
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var term = search.Trim();
+            var likeTerm = $"%{term}%";
+            query = query.Where(u => u.Email != null && EF.Functions.ILike(u.Email, likeTerm));
+        }
+
+        var users = await query
             .OrderBy(u => u.Email)
+            .Skip(skip)
+            .Take(take)
             .ToListAsync();
 
         var result = new List<object>(users.Count);
@@ -204,6 +221,22 @@ public class AuthController : ControllerBase
         }
 
         return Ok(result);
+    }
+
+    [HttpGet("admin/users/count")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> GetUsersForAdminCount([FromQuery] string? search = null)
+    {
+        var query = _userManager.Users.AsNoTracking();
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var term = search.Trim();
+            var likeTerm = $"%{term}%";
+            query = query.Where(u => u.Email != null && EF.Functions.ILike(u.Email, likeTerm));
+        }
+
+        return Ok(await query.CountAsync());
     }
 
     [HttpPut("admin/users/{id}/promote")]
