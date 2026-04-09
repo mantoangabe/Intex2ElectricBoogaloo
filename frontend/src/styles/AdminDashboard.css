@@ -54,7 +54,7 @@
 }
 
 .metric-card:nth-child(3) .metric-value {
-  color: var(--highlight);
+  color: #B8860B;
 }
 
 .metric-card:nth-child(4) .metric-value {

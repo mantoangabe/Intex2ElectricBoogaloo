@@ -1,5 +1,5 @@
 .login-container {
-  background: linear-gradient(135deg, var(--primary) 0%, #00a499 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
   min-height: 100vh;
   display: flex;
   align-items: center;
