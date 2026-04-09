@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import Navbar from '../components/Navbar';
-import handsImage from '../assets/Hands.jpg';
+import jumpImage from '../assets/jump.jpg';
 import '../styles/HomePage.css';
 
 export default function HomePage() {
@@ -25,7 +25,10 @@ export default function HomePage() {
     <div className="home">
       <Navbar />
 
-      <section className="hero-section">
+      <section
+        className="hero-section"
+        style={{ '--hero-bg': `url(${jumpImage})` } as React.CSSProperties}
+      >
         <h1>Restoring Hope, Rebuilding Lives</h1>
         <p>
           We provide safe shelter, healing programs, and reintegration support
@@ -37,10 +40,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="image-section">
-        <img src={handsImage} alt="girls walking down a hallway" />
-      </section>
-
       <section className="about-section">
         <h2>About Us</h2>
         <p>
@@ -49,6 +48,26 @@ export default function HomePage() {
           the guidelines of the Department of Social Welfare and Development (DSWD),
           we provide comprehensive care spanning shelter, psychosocial support,
           education, livelihood training, and family reintegration services.
+        </p>
+      </section>
+
+      <section className="how-help-section">
+        <h2>How You Can Help</h2>
+        <p>
+          Your support makes a direct impact on the lives of survivors. Whether through financial donations,
+          volunteering your time, or advocating for awareness, every contribution strengthens our ability to
+          provide shelter, healing programs, and reintegration services. Together, we can create lasting change
+          and restore hope to those who need it most.
+        </p>
+      </section>
+
+      <section className="location-section">
+        <h2>Where We Are Based</h2>
+        <p>
+          We are headquartered in Brazil, where our international team collaborates with local partners
+          to support survivors across multiple regions. Our network extends to the Philippines and beyond,
+          allowing us to provide culturally sensitive and locally-informed care to vulnerable populations
+          in underserved communities worldwide.
         </p>
       </section>
 
