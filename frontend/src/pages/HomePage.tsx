@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import Navbar from '../components/Navbar';
 import jumpImage from '../assets/jump.jpg';
+import journalingImage from '../assets/journaling-edit.jpg';
 import '../styles/HomePage.css';
 
 export default function HomePage() {
@@ -55,6 +56,10 @@ export default function HomePage() {
           provide shelter, healing programs, and reintegration services. Together, we can create lasting change
           and restore hope to those who need it most.
         </p>
+      </section>
+
+      <section className="image-section">
+        <img src={journalingImage} alt="Journaling and support" />
       </section>
 
       <section className="location-section">
