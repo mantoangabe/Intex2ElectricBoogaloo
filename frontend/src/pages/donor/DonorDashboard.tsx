@@ -1,15 +1,71 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import Navbar from "../../components/Navbar";
 import "../../styles/styles.css";
+import apiClient from "../../api/apiClient";
+
+interface DonorDonationHistoryItem {
+  donationId: number;
+  date: string;
+  amount: number | null;
+  type: string;
+  programArea: string | null;
+  note: string | null;
+}
 
 export default function DonorDashboard() {
   const [donationAmount, setDonationAmount] = useState("");
   const [donationType, setDonationType] = useState("Monetary");
   const [programArea, setProgramArea] = useState("General");
   const [note, setNote] = useState("");
+  const [history, setHistory] = useState<DonorDonationHistoryItem[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleDonate = (e: FormEvent<HTMLFormElement>) => {
+  const fetchDonationHistory = async () => {
+    try {
+      setIsLoadingHistory(true);
+      const response = await apiClient.get<DonorDonationHistoryItem[]>("/Donations/mine");
+      setHistory(response.data);
+      setHistoryError(null);
+    } catch {
+      setHistoryError("Unable to load your donation history.");
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  };
+
+  useEffect(() => {
+    void fetchDonationHistory();
+  }, []);
+
+  const handleDonate = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    const parsedAmount = Number(donationAmount);
+    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+      setSubmitError("Enter a valid donation amount greater than zero.");
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      setSubmitError(null);
+      await apiClient.post("/Donations/mine", {
+        amount: parsedAmount,
+        donationType,
+        programArea,
+        note,
+      });
+      await fetchDonationHistory();
+    } catch {
+      setSubmitError("Unable to submit donation right now. Please try again.");
+      return;
+    } finally {
+      setIsSubmitting(false);
+    }
+
     setDonationAmount("");
     setDonationType("Monetary");
     setProgramArea("General");
@@ -114,8 +170,13 @@ export default function DonorDashboard() {
             </div>
 
             <button type="submit" className="btn btn-primary">
-              Donate Now
+              {isSubmitting ? "Submitting..." : "Donate Now"}
             </button>
+            {submitError && (
+              <p style={{ color: "#c62828", marginTop: "0.75rem", marginBottom: 0 }}>
+                {submitError}
+              </p>
+            )}
           </form>
         </div>
 
@@ -133,11 +194,47 @@ export default function DonorDashboard() {
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td colSpan={5} className="placeholder-row">
-                  No donations yet. Make your first donation above!
-                </td>
-              </tr>
+              {isLoadingHistory && (
+                <tr>
+                  <td colSpan={5} className="placeholder-row">
+                    Loading donation history...
+                  </td>
+                </tr>
+              )}
+              {!isLoadingHistory && historyError && (
+                <tr>
+                  <td colSpan={5} className="placeholder-row">
+                    {historyError}
+                  </td>
+                </tr>
+              )}
+              {!isLoadingHistory &&
+                !historyError &&
+                history.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="placeholder-row">
+                      No donations found for your account yet.
+                    </td>
+                  </tr>
+                )}
+              {!isLoadingHistory &&
+                !historyError &&
+                history.map((donation) => (
+                  <tr key={donation.donationId}>
+                    <td>{new Date(donation.date).toLocaleDateString()}</td>
+                    <td>
+                      {donation.amount == null
+                        ? "-"
+                        : donation.amount.toLocaleString(undefined, {
+                            style: "currency",
+                            currency: "USD",
+                          })}
+                    </td>
+                    <td>{donation.type || "-"}</td>
+                    <td>{donation.programArea || "-"}</td>
+                    <td>{donation.note || "-"}</td>
+                  </tr>
+                ))}
             </tbody>
           </table>
         </div>

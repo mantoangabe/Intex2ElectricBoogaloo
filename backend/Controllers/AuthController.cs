@@ -32,10 +32,8 @@ public class AuthController : ControllerBase
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
 
-        if (!Enum.IsDefined(dto.Role))
-            return BadRequest(new { message = "Role must be 1 (Donor) or 2 (Admin)" });
-
-        var roleName = MapRoleName(dto.Role);
+        // Public self-registration is always donor-only.
+        var roleName = MapRoleName(UserRole.Donor);
 
         var user = new ApplicationUser
         {
@@ -59,13 +57,13 @@ public class AuthController : ControllerBase
             return BadRequest(new { message = "Role assignment failed", errors });
         }
 
-        _logger.LogInformation($"User {user.Email} registered with role {roleName} ({(int)dto.Role})");
+        _logger.LogInformation("User {Email} registered with role {Role}", user.Email, roleName);
 
         return Ok(new
         {
             message = "User registered successfully",
             email = user.Email,
-            roleId = (int)dto.Role,
+            roleId = (int)UserRole.Donor,
             role = roleName
         });
     }
@@ -310,7 +308,6 @@ public class RegisterDto
 {
     public string Email { get; set; } = null!;
     public string Password { get; set; } = null!;
-    public UserRole Role { get; set; }
 }
 
 public class LoginDto
