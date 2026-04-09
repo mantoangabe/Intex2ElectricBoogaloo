@@ -22,6 +22,8 @@ interface HomeVisitation {
 
 export default function HomeVisits() {
   const DEFAULT_PAGE_SIZE = 25;
+  const parsePageSize = (value: string, total: number) =>
+    value === "all" ? Math.max(total, 1) : Number(value);
   const [visits, setVisits] = useState<HomeVisitation[]>([]);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
@@ -120,6 +122,8 @@ export default function HomeVisits() {
       }
     }
   };
+  const pageSizeSelectValue =
+    totalCount > 0 && pageSize >= totalCount ? "all" : String(pageSize);
 
   return (
     <AdminLayout title="Home Visitation & Case Conferences">
@@ -308,9 +312,9 @@ export default function HomeVisits() {
             className="filter-select"
             style={{ marginLeft: "auto" }}
             aria-label="Items per page"
-            value={pageSize}
+            value={pageSizeSelectValue}
             onChange={(e) => {
-              const size = Number(e.target.value);
+              const size = parsePageSize(e.target.value, totalCount);
               setPageSize(size);
               setPage(1);
               fetchVisits(1, size);
@@ -319,6 +323,8 @@ export default function HomeVisits() {
             <option value={10}>10 / page</option>
             <option value={25}>25 / page</option>
             <option value={50}>50 / page</option>
+            <option value={100}>100 / page</option>
+            <option value="all">All records</option>
           </select>
           <button
             className="btn btn-secondary btn-sm"

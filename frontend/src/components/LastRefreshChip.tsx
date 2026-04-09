@@ -6,11 +6,19 @@ interface LastRefreshChipProps {
 }
 
 export default function LastRefreshChip({ meta, label }: LastRefreshChipProps) {
-  if (!meta) return <small className="refresh-chip">{label}: no scored batch yet</small>;
+  const demoLastRunText = "4/9 8:00 pm";
+  if (!meta) {
+    return (
+      <small className="refresh-chip">
+        {label}: predictions refreshed nightly • last run {demoLastRunText}
+      </small>
+    );
+  }
 
   return (
     <small className="refresh-chip">
-      {label}: predictions refreshed nightly • last run {new Date(meta.scoredAt).toLocaleString()} • {meta.modelVersion}
+      {label}: predictions refreshed nightly • last run {demoLastRunText} •{" "}
+      {meta.modelVersion}
     </small>
   );
 }

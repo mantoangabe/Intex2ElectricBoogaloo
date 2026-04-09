@@ -30,6 +30,9 @@ interface Resident {
 
 export default function CaseloadInventory() {
   const DEFAULT_PAGE_SIZE = 25;
+  const REACHED_OUT_STORAGE_KEY = "caseloadReachedOutByResident";
+  const parsePageSize = (value: string, total: number) =>
+    value === "all" ? Math.max(total, 1) : Number(value);
   const [residents, setResidents] = useState<Resident[]>([]);
   const [progressPredictions, setProgressPredictions] = useState<
     Record<number, ResidentProgressPrediction>
@@ -55,6 +58,12 @@ export default function CaseloadInventory() {
   const [incidentStageFilter, setIncidentStageFilter] = useState<
     "all" | "high" | "medium" | "low"
   >("all");
+  const [reachedOutByResident, setReachedOutByResident] = useState<
+    Record<number, boolean>
+  >({});
+  const [reachOutFilter, setReachOutFilter] = useState<
+    "all" | "unchecked" | "checked"
+  >("all");
   const filteredResidents = residents
     .filter((r) => {
       const p = progressPredictions[r.residentId]?.lowProgressRiskProbability;
@@ -63,9 +72,12 @@ export default function CaseloadInventory() {
         p == null ? "" : p >= 0.66 ? "high" : p >= 0.33 ? "medium" : "low";
       const iTier =
         i == null ? "" : i >= 0.66 ? "high" : i >= 0.33 ? "medium" : "low";
+      const reachedOut = !!reachedOutByResident[r.residentId];
       return (
         (progressStageFilter === "all" || pTier === progressStageFilter) &&
-        (incidentStageFilter === "all" || iTier === incidentStageFilter)
+        (incidentStageFilter === "all" || iTier === incidentStageFilter) &&
+        (reachOutFilter === "all" ||
+          (reachOutFilter === "checked" ? reachedOut : !reachedOut))
       );
     })
     .sort((a, b) => {
@@ -82,6 +94,11 @@ export default function CaseloadInventory() {
           incidentPredictions[a.residentId]?.incidentRiskProbability ?? -1;
         const bv =
           incidentPredictions[b.residentId]?.incidentRiskProbability ?? -1;
+        return (av - bv) * dir;
+      }
+      if (sortConfig.key === "incidentReachOut") {
+        const av = reachedOutByResident[a.residentId] ? 1 : 0;
+        const bv = reachedOutByResident[b.residentId] ? 1 : 0;
         return (av - bv) * dir;
       }
       return (
@@ -183,6 +200,26 @@ export default function CaseloadInventory() {
   ]);
 
   useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(REACHED_OUT_STORAGE_KEY);
+      if (raw) setReachedOutByResident(JSON.parse(raw) as Record<number, boolean>);
+    } catch {
+      setReachedOutByResident({});
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(
+        REACHED_OUT_STORAGE_KEY,
+        JSON.stringify(reachedOutByResident),
+      );
+    } catch {
+      // Ignore storage errors in restricted browsing contexts.
+    }
+  }, [reachedOutByResident]);
+
+  useEffect(() => {
     if (ENABLE_ML_PREDICTIONS) {
       apiClient
         .get<ResidentProgressPrediction[]>("/ResidentProgressPredictions", {
@@ -216,6 +253,13 @@ export default function CaseloadInventory() {
         .catch(() => setIncidentPredictions({}));
     }
   }, []);
+  const pageSizeSelectValue =
+    totalCount > 0 && pageSize >= totalCount ? "all" : String(pageSize);
+  const incidentRiskIsHigh = (residentId: number) =>
+    (incidentPredictions[residentId]?.incidentRiskProbability ?? 0) >= 0.66;
+  const toggleReachedOut = (residentId: number, checked: boolean) => {
+    setReachedOutByResident((prev) => ({ ...prev, [residentId]: checked }));
+  };
 
   const openModal = (resident: Resident | null) => {
     setEditResident(resident);
@@ -353,6 +397,18 @@ export default function CaseloadInventory() {
             <option value="low">Low</option>
           </select>
         )}
+        {ENABLE_ML_PREDICTIONS && (
+          <select
+            className="filter-select"
+            aria-label="Filter by incident outreach checkbox"
+            value={reachOutFilter}
+            onChange={(e) => setReachOutFilter(e.target.value as any)}
+          >
+            <option value="all">Reach Out Tracking: All</option>
+            <option value="unchecked">Reach Out Tracking: Unchecked</option>
+            <option value="checked">Reach Out Tracking: Checked</option>
+          </select>
+        )}
       </div>
 
       <div className="admin-card">
@@ -423,6 +479,19 @@ export default function CaseloadInventory() {
                     : "↕"}
                 </th>
               )}
+              {ENABLE_ML_PREDICTIONS && (
+                <th
+                  className="table-center clickable-th"
+                  onClick={() => toggleSort("incidentReachOut")}
+                >
+                  Reached Out{" "}
+                  {sortConfig.key === "incidentReachOut"
+                    ? sortConfig.dir === "asc"
+                      ? "▲"
+                      : "▼"
+                    : "↕"}
+                </th>
+              )}
               <th>Assigned Social Worker</th>
               <th>Actions</th>
             </tr>
@@ -431,7 +500,7 @@ export default function CaseloadInventory() {
             {error && (
               <tr>
                 <td
-                  colSpan={ENABLE_ML_PREDICTIONS ? 10 : 8}
+                  colSpan={ENABLE_ML_PREDICTIONS ? 11 : 8}
                   className="placeholder-row"
                 >
                   {error}
@@ -441,7 +510,7 @@ export default function CaseloadInventory() {
             {filteredResidents.length === 0 && !error && (
               <tr>
                 <td
-                  colSpan={ENABLE_ML_PREDICTIONS ? 10 : 8}
+                  colSpan={ENABLE_ML_PREDICTIONS ? 11 : 8}
                   className="placeholder-row"
                 >
                   No residents found.
@@ -482,6 +551,19 @@ export default function CaseloadInventory() {
                     ) : (
                       "—"
                     )}
+                  </td>
+                )}
+                {ENABLE_ML_PREDICTIONS && (
+                  <td className="table-center">
+                    <input
+                      type="checkbox"
+                      checked={!!reachedOutByResident[r.residentId]}
+                      disabled={!incidentRiskIsHigh(r.residentId)}
+                      onChange={(e) =>
+                        toggleReachedOut(r.residentId, e.target.checked)
+                      }
+                      aria-label={`Reached out for resident ${r.residentId}`}
+                    />
                   </td>
                 )}
                 <td>{r.assignedSocialWorker}</td>
@@ -540,9 +622,9 @@ export default function CaseloadInventory() {
             className="filter-select"
             style={{ marginLeft: "auto" }}
             aria-label="Items per page"
-            value={pageSize}
+            value={pageSizeSelectValue}
             onChange={(e) => {
-              const size = Number(e.target.value);
+              const size = parsePageSize(e.target.value, totalCount);
               setPageSize(size);
               setPage(1);
             }}
@@ -550,6 +632,8 @@ export default function CaseloadInventory() {
             <option value={10}>10 / page</option>
             <option value={25}>25 / page</option>
             <option value={50}>50 / page</option>
+            <option value={100}>100 / page</option>
+            <option value="all">All records</option>
           </select>
           <button
             className="btn btn-secondary btn-sm"

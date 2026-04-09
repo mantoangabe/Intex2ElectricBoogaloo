@@ -5,6 +5,24 @@ namespace backend.Data;
 
 public static class PredictionSeedService
 {
+    public static async Task<int> RefreshSocialDonationPredictionsAsync(
+        IntexDbContext context,
+        DateTime? scoredAtOverride = null)
+    {
+        var scoredAt = scoredAtOverride ?? DateTime.UtcNow;
+        var asOfDate = scoredAt.Date;
+
+        var existing = await context.SocialDonationPredictions.ToListAsync();
+        if (existing.Count > 0)
+        {
+            context.SocialDonationPredictions.RemoveRange(existing);
+            await context.SaveChangesAsync();
+        }
+
+        await SeedSocialDonationAsync(context, asOfDate, scoredAt);
+        return await context.SocialDonationPredictions.CountAsync();
+    }
+
     public static async Task SeedAsync(IntexDbContext context)
     {
         var scoredAt = DateTime.UtcNow.Date.AddDays(-1).AddHours(2);
