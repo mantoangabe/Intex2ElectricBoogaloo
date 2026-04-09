@@ -25,7 +25,7 @@ export default function AdminDashboard() {
   const [highLapseCount, setHighLapseCount] = useState<number | null>(null);
   const [highResidentRiskCount, setHighResidentRiskCount] = useState<number | null>(null);
   const [highIncidentRiskCount, setHighIncidentRiskCount] = useState<number | null>(null);
-  const [topSocialAvgPhp, setTopSocialAvgPhp] = useState<number | null>(null);
+  const [topSocialAvgUsd, setTopSocialAvgUsd] = useState<number | null>(null);
   const [highConversionInTopSlice, setHighConversionInTopSlice] = useState<number | null>(null);
   const donorMeta = usePredictionMeta('/DonorRetentionPredictions/meta/latest', ENABLE_ML_PREDICTIONS);
   const residentMeta = usePredictionMeta('/ResidentProgressPredictions/meta/latest', ENABLE_ML_PREDICTIONS);
@@ -54,17 +54,17 @@ export default function AdminDashboard() {
       apiClient.get<SocialDonationPrediction[]>('/SocialDonationPredictions', { params: { take: SOCIAL_TOP_COUNT, latestOnly: true, sort: 'value_desc' } })
         .then(r => {
           if (!r.data.length) {
-            setTopSocialAvgPhp(0);
+            setTopSocialAvgUsd(0);
             setHighConversionInTopSlice(0);
             return;
           }
           const avg = r.data.reduce((sum, p) => sum + p.predictedDonationValuePhp, 0) / r.data.length;
-          setTopSocialAvgPhp(avg);
+          setTopSocialAvgUsd(avg);
           const hi = r.data.filter(p => (p.pHighConversion ?? 0) >= HIGH_CONVERSION_THRESHOLD).length;
           setHighConversionInTopSlice(hi);
         })
         .catch(() => {
-          setTopSocialAvgPhp(null);
+          setTopSocialAvgUsd(null);
           setHighConversionInTopSlice(null);
         });
     }
@@ -72,10 +72,10 @@ export default function AdminDashboard() {
 
   const fmt = (val: number | null) => val === null ? '...' : val.toLocaleString();
 
-  const fmtPhp = (val: number | null) =>
+  const fmtUsdMoney = (val: number | null) =>
     val === null
       ? '...'
-      : `₱${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      : `$${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   return (
     <AdminLayout title="River of Life Admin Dashboard">
@@ -125,10 +125,10 @@ export default function AdminDashboard() {
               </div>
             </div>
             <div className="metric-card">
-              <div className="metric-value">{fmtPhp(topSocialAvgPhp)}</div>
-              <div className="metric-label">Social: mean predicted donation (PHP)</div>
+              <div className="metric-value">{fmtUsdMoney(topSocialAvgUsd)}</div>
+              <div className="metric-label">Social: mean predicted donation (USD)</div>
               <div style={{ marginTop: '0.6rem', fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
-                Average of <strong>predicted_donation_value_php</strong> over the top {SOCIAL_TOP_COUNT} social posts by predicted value (latest batch). Aligns with the social donation ML pipeline and OKR &quot;impact from social content.&quot;
+                Average model output over the top {SOCIAL_TOP_COUNT} social posts by predicted value (latest batch). Same numeric scale as the pipeline field; shown in USD for reporting (not a separate FX conversion).
               </div>
               <div style={{ marginTop: '0.45rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                 <strong>High conversion (top slice):</strong>{' '}

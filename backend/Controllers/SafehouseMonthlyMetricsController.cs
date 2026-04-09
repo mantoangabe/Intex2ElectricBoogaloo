@@ -50,19 +50,39 @@ namespace backend.Controllers
         /// fills missing education/health averages from education_records and health_wellbeing_records;
         /// estimates active residents from resident admission/closure dates when no row exists.
         /// </summary>
-        // GET: api/SafehouseMonthlyMetrics/month-summary?year=2025&month=6
+        // GET: api/SafehouseMonthlyMetrics/month-summary?monthStart=2026-01-01
+        // or: month-summary?year=2025&month=6
         [HttpGet("month-summary")]
         public async Task<ActionResult<IEnumerable<SafehouseMonthSummaryDto>>> GetMonthSummary(
-            [FromQuery] int year,
-            [FromQuery] int month)
+            [FromQuery(Name = "monthStart")] string? monthStartQuery = null,
+            [FromQuery] int? year = null,
+            [FromQuery] int? month = null)
         {
-            if (month is < 1 or > 12)
+            DateTime periodStart;
+            if (!string.IsNullOrWhiteSpace(monthStartQuery))
             {
-                return BadRequest("month must be 1–12.");
+                if (!DateTime.TryParse(monthStartQuery, out var parsed))
+                {
+                    return BadRequest("monthStart must be a valid date (e.g. yyyy-MM-dd).");
+                }
+
+                periodStart = new DateTime(parsed.Year, parsed.Month, 1, 0, 0, 0, DateTimeKind.Unspecified);
+            }
+            else if (year.HasValue && month.HasValue)
+            {
+                if (month.Value is < 1 or > 12)
+                {
+                    return BadRequest("month must be 1–12.");
+                }
+
+                periodStart = new DateTime(year.Value, month.Value, 1, 0, 0, 0, DateTimeKind.Unspecified);
+            }
+            else
+            {
+                return BadRequest("Provide monthStart (first day of month, e.g. 2026-01-01) or both year and month.");
             }
 
-            var monthStart = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Unspecified);
-            var monthEndExclusive = monthStart.AddMonths(1);
+            var monthEndExclusive = periodStart.AddMonths(1);
             var monthEnd = monthEndExclusive.AddDays(-1);
 
             var safehouses = await _context.Safehouses
@@ -70,7 +90,7 @@ namespace backend.Controllers
                 .ToListAsync();
 
             var metricsForMonth = await _context.SafehouseMonthlyMetrics
-                .Where(m => m.MonthStart.Year == year && m.MonthStart.Month == month)
+                .Where(m => m.MonthStart.Year == periodStart.Year && m.MonthStart.Month == periodStart.Month)
                 .ToListAsync();
 
             var result = new List<SafehouseMonthSummaryDto>(safehouses.Count);
@@ -88,13 +108,13 @@ namespace backend.Controllers
                     .CountAsync(r =>
                         r.SafehouseId == sh.SafehouseId
                         && r.DateOfAdmission <= monthEnd
-                        && (r.DateClosed == null || r.DateClosed >= monthStart));
+                        && (r.DateClosed == null || r.DateClosed >= periodStart));
 
                 decimal? computedEd = null;
                 var edQ = _context.EducationRecords
                     .Where(e =>
                         residentIds.Contains(e.ResidentId)
-                        && e.RecordDate >= monthStart
+                        && e.RecordDate >= periodStart
                         && e.RecordDate < monthEndExclusive);
                 if (await edQ.AnyAsync())
                 {
@@ -105,7 +125,7 @@ namespace backend.Controllers
                 var hwQ = _context.HealthWellbeingRecords
                     .Where(h =>
                         residentIds.Contains(h.ResidentId)
-                        && h.RecordDate >= monthStart
+                        && h.RecordDate >= periodStart
                         && h.RecordDate < monthEndExclusive);
                 if (await hwQ.AnyAsync())
                 {
@@ -129,7 +149,7 @@ namespace backend.Controllers
                 {
                     SafehouseId = sh.SafehouseId,
                     SafehouseName = string.IsNullOrWhiteSpace(sh.Name) ? $"Safehouse {sh.SafehouseId}" : sh.Name,
-                    MonthStart = monthStart.ToString("yyyy-MM-dd"),
+                    MonthStart = periodStart.ToString("yyyy-MM-dd"),
                     MonthEnd = monthEnd.ToString("yyyy-MM-dd"),
                     MetricId = stored?.MetricId,
                     ActiveResidents = active,
