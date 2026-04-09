@@ -1,30 +1,40 @@
-import { useState, type FormEvent } from 'react';
-import Navbar from '../../components/Navbar';
-import '../../styles/styles.css';
+import { useState, type FormEvent } from "react";
+import Navbar from "../../components/Navbar";
+import "../../styles/styles.css";
 
 export default function DonorDashboard() {
-  const [donationAmount, setDonationAmount] = useState('');
-  const [donationType, setDonationType] = useState('Monetary');
-  const [programArea, setProgramArea] = useState('General');
-  const [note, setNote] = useState('');
+  const [donationAmount, setDonationAmount] = useState("");
+  const [donationType, setDonationType] = useState("Monetary");
+  const [programArea, setProgramArea] = useState("General");
+  const [note, setNote] = useState("");
 
   const handleDonate = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setDonationAmount('');
-    setDonationType('Monetary');
-    setProgramArea('General');
-    setNote('');
+    setDonationAmount("");
+    setDonationType("Monetary");
+    setProgramArea("General");
+    setNote("");
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+    <div
+      style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}
+    >
       <Navbar />
 
-      <main className="public-page-main" style={{ maxWidth: '1000px' }}>
+      <main className="public-page-main" style={{ maxWidth: "1000px" }}>
         <div className="page-header">
           <div>
-            <h2 style={{ color: 'var(--text)', margin: 0 }}>My Donor Dashboard</h2>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: '0.25rem 0 0' }}>
+            <h2 style={{ color: "var(--text)", margin: 0 }}>
+              My Donor Dashboard
+            </h2>
+            <p
+              style={{
+                color: "var(--text-muted)",
+                fontSize: "0.9rem",
+                margin: "0.25rem 0 0",
+              }}
+            >
               Manage your contributions and view your impact
             </p>
           </div>
@@ -34,10 +44,17 @@ export default function DonorDashboard() {
         <div className="admin-card">
           <h3>Make a Donation</h3>
           <form onSubmit={handleDonate}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
+                gap: "1rem",
+              }}
+            >
               <div className="form-group">
-                <label>Amount</label>
+                <label htmlFor="donor-donation-amount">Amount</label>
                 <input
+                  id="donor-donation-amount"
                   type="number"
                   step="0.01"
                   placeholder="$50.00"
@@ -47,8 +64,12 @@ export default function DonorDashboard() {
               </div>
 
               <div className="form-group">
-                <label>Donation Type</label>
-                <select value={donationType} onChange={(e) => setDonationType(e.target.value)}>
+                <label htmlFor="donor-donation-type">Donation Type</label>
+                <select
+                  id="donor-donation-type"
+                  value={donationType}
+                  onChange={(e) => setDonationType(e.target.value)}
+                >
                   <option>Monetary</option>
                   <option>In-Kind</option>
                   <option>Skills</option>
@@ -57,8 +78,12 @@ export default function DonorDashboard() {
               </div>
 
               <div className="form-group">
-                <label>Program Area</label>
-                <select value={programArea} onChange={(e) => setProgramArea(e.target.value)}>
+                <label htmlFor="donor-program-area">Program Area</label>
+                <select
+                  id="donor-program-area"
+                  value={programArea}
+                  onChange={(e) => setProgramArea(e.target.value)}
+                >
                   <option>General</option>
                   <option>Safehouse A</option>
                   <option>Safehouse B</option>
@@ -70,13 +95,21 @@ export default function DonorDashboard() {
             </div>
 
             <div className="form-group">
-              <label>Note (Optional)</label>
+              <label htmlFor="donor-note">Note (Optional)</label>
               <textarea
+                id="donor-note"
                 placeholder="Special instructions or comments..."
                 rows={3}
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
-                style={{ fontFamily: 'var(--sans)', padding: '0.7rem 0.9rem', border: '1px solid var(--border)', borderRadius: '6px', width: '100%', boxSizing: 'border-box' }}
+                style={{
+                  fontFamily: "var(--sans)",
+                  padding: "0.7rem 0.9rem",
+                  border: "1px solid var(--border)",
+                  borderRadius: "6px",
+                  width: "100%",
+                  boxSizing: "border-box",
+                }}
               />
             </div>
 
@@ -112,7 +145,8 @@ export default function DonorDashboard() {
 
       <footer className="footer">
         <p>
-          &copy; {new Date().getFullYear()} River of Life. All rights reserved. | <a href="/privacy">Privacy Policy</a> |{' '}
+          &copy; {new Date().getFullYear()} River of Life. All rights reserved.
+          | <a href="/privacy">Privacy Policy</a> |{" "}
           <a href="/cookies">Cookie Policy</a>
         </p>
       </footer>
