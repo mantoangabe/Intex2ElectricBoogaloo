@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import Navbar from '../../components/Navbar';
 import '../../styles/styles.css';
+import '../../styles/DonorImpact.css';
 import apiClient from '../../api/apiClient';
 
 interface Donation {
@@ -129,20 +130,15 @@ export default function DonorImpact() {
       <Navbar />
 
       <main style={{ flex: 1 }}>
-        <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '4rem 2rem' }}>
+        <div className="donor-impact-container">
           {sections.map((section, idx) => (
             <div
               key={section.number}
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '3rem 1fr 1fr',
-                columnGap: '3rem',
-                position: 'relative',
-                paddingBottom: idx < sections.length - 1 ? '5rem' : 0,
-              }}
+              className="donor-impact-row"
+              style={{ paddingBottom: idx < sections.length - 1 ? '5rem' : 0 }}
             >
               {/* Timeline: number circle + connecting line */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <div className="donor-impact-timeline">
                 <div style={{
                   width: '3rem',
                   height: '3rem',
@@ -159,18 +155,13 @@ export default function DonorImpact() {
                   {section.number}
                 </div>
                 {idx < sections.length - 1 && (
-                  <div style={{
-                    width: '2px',
-                    flex: 1,
-                    background: 'var(--border)',
-                    marginTop: '0.5rem',
-                  }} />
+                  <div className="donor-impact-timeline-line" />
                 )}
               </div>
 
               {/* Left: heading + description */}
               <div style={{ paddingTop: '0.4rem' }}>
-                <h2 style={{ color: 'var(--text)', fontSize: '2rem', marginBottom: '1rem' }}>
+                <h2 style={{ color: 'var(--text)', marginBottom: '1rem' }}>
                   {section.heading}
                 </h2>
                 <p style={{ color: 'var(--text-muted)', lineHeight: 1.7, margin: 0 }}>
@@ -179,43 +170,22 @@ export default function DonorImpact() {
               </div>
 
               {/* Right: stat cards */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div className="donor-impact-stats">
                 {(section.number === 1 || section.number === 3) && section.bottomCards && section.bottomCards.length > 0 ? (
                   <>
-                    {/* Top row: full-width card(s) */}
-                    <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                    <div className="donor-impact-stats-row">
                       {section.topCards.map(card => (
-                        <div
-                          key={card.label}
-                          style={{
-                            background: 'var(--white)',
-                            borderRadius: '16px',
-                            boxShadow: 'var(--shadow-sm)',
-                            padding: '1.75rem 2rem',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            flex: 1,
-                          }}
-                        >
-                          <p style={{ color: 'var(--text-muted)', fontWeight: 600, margin: '0 0 0.5rem', textAlign: 'center', fontSize: '0.875rem' }}>
-                            {card.label}
-                          </p>
-                          <p style={{ fontSize: '2.25rem', fontWeight: 700, margin: 0, color: 'var(--text)' }}>
-                            {card.value}
-                          </p>
-                        </div>
+                        <StatCard key={card.label} label={card.label} value={card.value} />
                       ))}
                     </div>
-                    {/* Bottom row: 2 cards side by side */}
-                    <div style={{ display: 'flex', gap: '1rem' }}>
+                    <div className="donor-impact-stats-row">
                       {section.bottomCards.map(card => (
                         <StatCard key={card.label} label={card.label} value={card.value} />
                       ))}
                     </div>
                   </>
                 ) : (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', alignContent: 'flex-start' }}>
+                  <div className="donor-impact-stats-row">
                     {section.topCards.map(card => (
                       <StatCard key={card.label} label={card.label} value={card.value} />
                     ))}

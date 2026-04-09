@@ -20,7 +20,7 @@ export default function DonorDashboard() {
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <Navbar />
 
-      <main style={{ flex: 1, padding: '2rem', maxWidth: '1000px', margin: '0 auto', width: '100%' }}>
+      <main className="public-page-main" style={{ maxWidth: '1000px' }}>
         <div className="page-header">
           <div>
             <h2 style={{ color: 'var(--text)', margin: 0 }}>My Donor Dashboard</h2>

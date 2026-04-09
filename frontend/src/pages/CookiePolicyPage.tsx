@@ -6,7 +6,7 @@ export default function CookiePolicyPage() {
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <Navbar />
 
-      <main style={{ flex: 1, padding: '2rem', maxWidth: '900px', margin: '0 auto' }}>
+      <main className="public-page-main">
         <h1 style={{ color: 'var(--text)' }}>Cookie Policy</h1>
         <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>
           Last updated: April 8, 2026

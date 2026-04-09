@@ -75,6 +75,15 @@ export default function Navbar({ title }: NavbarProps) {
                 {link.label}
               </a>
             ))}
+            <a
+              className="admin-mobile-menu-link"
+              onClick={() => {
+                handleLogout();
+                setMenuOpen(false);
+              }}
+            >
+              Logout
+            </a>
           </nav>
         )}
       </header>
@@ -83,11 +92,9 @@ export default function Navbar({ title }: NavbarProps) {
 
   return (
     <nav className="navbar">
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-        <span className="navbar-brand" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
-          River of Life
-        </span>
-      </div>
+      <span className="navbar-brand" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
+        River of Life
+      </span>
 
       <div className="navbar-links">
         {navLinks.map(link => (
@@ -109,6 +116,54 @@ export default function Navbar({ title }: NavbarProps) {
           </button>
         )}
       </div>
+
+      <button
+        className="hamburger-btn navbar-hamburger"
+        onClick={() => setMenuOpen(!menuOpen)}
+        aria-label="Toggle menu"
+      >
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+
+      {menuOpen && (
+        <div className="navbar-mobile-menu">
+          {navLinks.map(link => (
+            <a
+              key={link.path}
+              className="navbar-mobile-menu-link"
+              onClick={() => {
+                navigate(link.path);
+                setMenuOpen(false);
+              }}
+            >
+              {link.label}
+            </a>
+          ))}
+          {isAuthenticated ? (
+            <a
+              className="navbar-mobile-menu-link"
+              onClick={() => {
+                handleLogout();
+                setMenuOpen(false);
+              }}
+            >
+              Logout
+            </a>
+          ) : (
+            <a
+              className="navbar-mobile-menu-link"
+              onClick={() => {
+                navigate('/login');
+                setMenuOpen(false);
+              }}
+            >
+              Staff Login
+            </a>
+          )}
+        </div>
+      )}
     </nav>
   );
 }

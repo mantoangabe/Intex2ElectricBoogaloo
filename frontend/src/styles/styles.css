@@ -448,6 +448,74 @@
   .filter-input {
     min-width: unset;
   }
+
+  .admin-table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .modal {
+    margin: 0.5rem;
+    padding: 1.25rem;
+    max-width: calc(100% - 1rem);
+  }
+
+  .modal-footer {
+    flex-direction: column;
+  }
+
+  .modal-footer .btn {
+    width: 100%;
+  }
+
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    font-size: 16px;
+  }
+
+  .footer {
+    padding: 1rem;
+    font-size: 0.85rem;
+  }
+
+  .public-page-main {
+    padding: 1.25rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .public-page-main {
+    padding: 1rem;
+  }
+
+  .public-page-main h1 {
+    font-size: 1.5rem;
+  }
+
+  .public-page-main h2 {
+    font-size: 1.25rem;
+  }
+
+  .pagination-row {
+    gap: 0.5rem;
+  }
+
+  .pagination-row .btn {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.8rem;
+  }
+}
+
+/* ─── Public Page Main ──────────────────────────────────────────────── */
+.public-page-main {
+  flex: 1;
+  padding: 2rem;
+  max-width: 900px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* ─── Modal ──────────────────────────────────────────────────── */
