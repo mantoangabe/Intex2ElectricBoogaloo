@@ -25,9 +25,33 @@ namespace backend.Controllers
 
         // GET: api/Residents
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Resident>>> GetResidents([FromQuery] int skip = 0, [FromQuery] int take = 25)
+        public async Task<ActionResult<IEnumerable<Resident>>> GetResidents(
+            [FromQuery] int skip = 0,
+            [FromQuery] int take = 25,
+            [FromQuery] string? search = null,
+            [FromQuery] int? safehouseId = null,
+            [FromQuery] string? caseCategory = null,
+            [FromQuery] string? caseStatus = null)
         {
-            return await _context.Residents.Skip(skip).Take(take).ToListAsync();
+            if (skip < 0) skip = 0;
+            if (take <= 0) take = 25;
+
+            var query = ApplyFilters(_context.Residents.AsNoTracking(), search, safehouseId, caseCategory, caseStatus)
+                .OrderBy(r => r.ResidentId);
+
+            return await query.Skip(skip).Take(take).ToListAsync();
+        }
+
+        // GET: api/Residents/count
+        [HttpGet("count")]
+        public async Task<ActionResult<int>> GetResidentsCount(
+            [FromQuery] string? search = null,
+            [FromQuery] int? safehouseId = null,
+            [FromQuery] string? caseCategory = null,
+            [FromQuery] string? caseStatus = null)
+        {
+            var query = ApplyFilters(_context.Residents.AsNoTracking(), search, safehouseId, caseCategory, caseStatus);
+            return await query.CountAsync();
         }
 
         // GET: api/Residents/5
@@ -105,6 +129,55 @@ namespace backend.Controllers
         private bool ResidentExists(int id)
         {
             return _context.Residents.Any(e => e.ResidentId == id);
+        }
+
+        private static IQueryable<Resident> ApplyFilters(
+            IQueryable<Resident> query,
+            string? search,
+            int? safehouseId,
+            string? caseCategory,
+            string? caseStatus)
+        {
+            if (safehouseId.HasValue)
+            {
+                query = query.Where(r => r.SafehouseId == safehouseId.Value);
+            }
+
+            if (!string.IsNullOrWhiteSpace(caseCategory))
+            {
+                var category = caseCategory.Trim();
+                query = query.Where(r => r.CaseCategory == category);
+            }
+
+            if (!string.IsNullOrWhiteSpace(caseStatus))
+            {
+                var status = caseStatus.Trim();
+                query = query.Where(r => r.CaseStatus == status);
+            }
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var term = search.Trim();
+                var likeTerm = $"%{term}%";
+
+                if (int.TryParse(term, out var residentId))
+                {
+                    query = query.Where(r =>
+                        r.ResidentId == residentId ||
+                        EF.Functions.ILike(r.CaseControlNo, likeTerm) ||
+                        EF.Functions.ILike(r.InternalCode, likeTerm) ||
+                        EF.Functions.ILike(r.AssignedSocialWorker, likeTerm));
+                }
+                else
+                {
+                    query = query.Where(r =>
+                        EF.Functions.ILike(r.CaseControlNo, likeTerm) ||
+                        EF.Functions.ILike(r.InternalCode, likeTerm) ||
+                        EF.Functions.ILike(r.AssignedSocialWorker, likeTerm));
+                }
+            }
+
+            return query;
         }
     }
 }

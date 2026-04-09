@@ -19,6 +19,7 @@ import CaseloadInventory from './pages/admin/CaseloadInventory';
 import ProcessRecording from './pages/admin/ProcessRecording';
 import HomeVisits from './pages/admin/HomeVisits';
 import Reports from './pages/admin/Reports';
+import UserRoles from './pages/admin/UserRoles';
 
 function App() {
   return (
@@ -40,6 +41,7 @@ function App() {
         <Route path="/admin/process-recording" element={<RequireAdmin><ProcessRecording /></RequireAdmin>} />
         <Route path="/admin/home-visits" element={<RequireAdmin><HomeVisits /></RequireAdmin>} />
         <Route path="/admin/reports" element={<RequireAdmin><Reports /></RequireAdmin>} />
+        <Route path="/admin/user-roles" element={<RequireAdmin><UserRoles /></RequireAdmin>} />
 
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" />} />

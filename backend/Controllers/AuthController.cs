@@ -2,6 +2,7 @@ using backend.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 
 namespace backend.Controllers;
@@ -175,6 +176,100 @@ public class AuthController : ControllerBase
 
         _logger.LogInformation($"User {user.Email} changed password");
         return Ok(new { message = "Password changed successfully" });
+    }
+
+    [HttpGet("admin/users")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> GetUsersForAdmin()
+    {
+        var users = await _userManager.Users
+            .OrderBy(u => u.Email)
+            .ToListAsync();
+
+        var result = new List<object>(users.Count);
+
+        foreach (var user in users)
+        {
+            var roles = await _userManager.GetRolesAsync(user);
+            var roleId = roles.Contains("Admin") ? 2 : 1;
+            var roleName = roleId == 2 ? "Admin" : "Donor";
+
+            result.Add(new
+            {
+                id = user.Id,
+                email = user.Email,
+                roleId,
+                role = roleName,
+            });
+        }
+
+        return Ok(result);
+    }
+
+    [HttpPut("admin/users/{id}/promote")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> PromoteDonorToAdmin(string id)
+    {
+        return await SetUserRoleAsync(id, UserRole.Admin);
+    }
+
+    [HttpPut("admin/users/{id}/demote")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> DemoteAdminToDonor(string id)
+    {
+        var currentUserId = _userManager.GetUserId(User);
+        if (string.Equals(currentUserId, id, StringComparison.Ordinal))
+        {
+            return BadRequest(new { message = "You cannot demote your own account." });
+        }
+
+        return await SetUserRoleAsync(id, UserRole.Donor);
+    }
+
+    private async Task<IActionResult> SetUserRoleAsync(string id, UserRole targetRole)
+    {
+        var user = await _userManager.FindByIdAsync(id);
+        if (user == null)
+        {
+            return NotFound(new { message = "User not found" });
+        }
+
+        var roles = await _userManager.GetRolesAsync(user);
+        var targetRoleName = MapRoleName(targetRole);
+        var currentRoleName = roles.Contains("Admin") ? "Admin" : "Donor";
+
+        if (string.Equals(currentRoleName, targetRoleName, StringComparison.OrdinalIgnoreCase))
+        {
+            return BadRequest(new { message = $"User is already a {targetRoleName.ToLowerInvariant()}" });
+        }
+
+        foreach (var role in roles)
+        {
+            var removeResult = await _userManager.RemoveFromRoleAsync(user, role);
+            if (!removeResult.Succeeded)
+            {
+                var errors = string.Join(", ", removeResult.Errors.Select(e => e.Description));
+                return BadRequest(new { message = $"Failed to remove {role} role", errors });
+            }
+        }
+
+        var addResult = await _userManager.AddToRoleAsync(user, targetRoleName);
+        if (!addResult.Succeeded)
+        {
+            var errors = string.Join(", ", addResult.Errors.Select(e => e.Description));
+            return BadRequest(new { message = $"Failed to add {targetRoleName} role", errors });
+        }
+
+        _logger.LogInformation("User {Email} changed role to {Role}", user.Email, targetRoleName);
+
+        return Ok(new
+        {
+            message = $"User updated to {targetRoleName}",
+            id = user.Id,
+            email = user.Email,
+            roleId = targetRole == UserRole.Admin ? 2 : 1,
+            role = targetRoleName,
+        });
     }
 }
 
