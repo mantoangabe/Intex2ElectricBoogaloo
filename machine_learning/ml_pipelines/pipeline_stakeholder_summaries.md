@@ -6,7 +6,7 @@
 
 This document summarizes **four** upgraded analytics pipelines: what problem they address, what the models do, what we learned at a high level, and **why it matters** for mission and operations.
 
-**Application note:** Trained scores are loaded into the **PostgreSQL** prediction tables and surfaced through the **.NET API** and **admin UI** (dashboard and reports). Counts and averages use the **latest scored batch** (`scored_at`) unless otherwise noted. Leadership views may label donation-related figures in **USD** for planning consistency; the underlying stored column remains **`predicted_donation_value_php`** (same numeric scale as the model—**not** a foreign-exchange conversion in the app).
+**Application note:** Trained scores are loaded into the **PostgreSQL** prediction tables and surfaced through the **.NET API** and **admin UI** (dashboard and reports). Counts and averages use the **latest scored batch** (`scored_at`) unless otherwise noted. **Pipeline 10** stores expected lift as **`predicted_donation_value_php`** (peso-scale). The admin UI converts those values to **approximate US dollars for display** using a simple **~56 PHP/USD** planning ratio so per-post figures are interpretable to judges and US stakeholders (not “twenty-two thousand US dollars per post” from mislabeled peso numbers).
 
 ---
 
@@ -125,7 +125,7 @@ Align social strategy with **fundraising**, not vanity metrics: estimate which *
 ### In the admin application
 - **Dashboard:** summarizes **mean predicted donation** over the **top N** posts by predicted value (latest batch), plus how many of those posts show **high conversion probability**—aligned with OKR-style “impact from social content.”
 - **Reports & OKRs:** objective-level **target vs actual** uses the **same latest batch** metrics as the dashboard (leadership-configured baselines/targets in software).
-- **Post Draft Scorer (reports):** does **not** re-run the Python `joblib` model in the browser. It starts from **blended** `predicted_donation_value_php` for scored posts **similar** to the draft (platform, post type, word count, CTA, resident story), then applies a **strong log-scale adjustment** so **every** control (including **urgency language**) visibly moves both the **dollar estimate** and the **0–100 potential** score—aligned with Pipeline 10 feature families. If post metadata is missing for blending, the UI starts from the **batch mean** and says so.
+- **Post Draft Scorer (reports):** does **not** re-run the Python `joblib` model in the browser. It starts from **blended** `predicted_donation_value_php` for scored posts **similar** to the draft (platform, post type, word count, CTA, resident story), then applies a **strong log-scale adjustment** so **every** control (including **urgency language**) visibly moves the estimate and the **0–100 potential** score. The UI then applies the **same PHP→~USD** display conversion as the dashboard. If post metadata is missing for blending, the UI starts from the **batch mean** and says so.
 
 ### Presentation line
 *“We score draft posts by traits we can choose before publish—channel, ask, story cues, timing—against which historical posts actually showed attributed gifts, so marketing invests in content patterns tied to donations, not just likes.”*

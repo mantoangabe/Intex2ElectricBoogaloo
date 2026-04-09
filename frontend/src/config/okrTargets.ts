@@ -63,8 +63,9 @@ export const OKR_DEFINITIONS: OkrDefinition[] = [
     metricKey: 'avgPredictedDonationUsd',
     unit: 'usd',
     direction: 'higher',
-    baseline: 22000,
-    target: 28000,
+    /** Planning numbers in USD (converted from prior PHP-scale targets ≈ 22k / 28k PHP at ~56 PHP/USD). */
+    baseline: 393,
+    target: 500,
   },
 ];
 

@@ -4,6 +4,10 @@ import '../styles/AdminDashboard.css';
 import apiClient from '../api/apiClient';
 import LastRefreshChip from '../components/LastRefreshChip';
 import { ENABLE_ML_PREDICTIONS } from '../config/features';
+import {
+  PHP_PER_USD_APPROX,
+  predictedDonationPhpToDisplayUsd,
+} from '../config/socialDonationDisplay';
 import { usePredictionMeta } from '../hooks/usePredictionMeta';
 import type {
   DonorRetentionPrediction,
@@ -58,8 +62,10 @@ export default function AdminDashboard() {
             setHighConversionInTopSlice(0);
             return;
           }
-          const avg = r.data.reduce((sum, p) => sum + p.predictedDonationValuePhp, 0) / r.data.length;
-          setTopSocialAvgUsd(avg);
+          const avgPhp =
+            r.data.reduce((sum, p) => sum + p.predictedDonationValuePhp, 0) /
+            r.data.length;
+          setTopSocialAvgUsd(predictedDonationPhpToDisplayUsd(avgPhp));
           const hi = r.data.filter(p => (p.pHighConversion ?? 0) >= HIGH_CONVERSION_THRESHOLD).length;
           setHighConversionInTopSlice(hi);
         })
@@ -126,9 +132,9 @@ export default function AdminDashboard() {
             </div>
             <div className="metric-card">
               <div className="metric-value">{fmtUsdMoney(topSocialAvgUsd)}</div>
-              <div className="metric-label">Social: mean predicted donation (USD)</div>
+              <div className="metric-label">Social: mean predicted donation (~USD)</div>
               <div style={{ marginTop: '0.6rem', fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
-                Average model output over the top {SOCIAL_TOP_COUNT} social posts by predicted value (latest batch). Same numeric scale as the pipeline field; shown in USD for reporting (not a separate FX conversion).
+                Model stores <strong>PHP-scale</strong> expected lift per post (<code>predicted_donation_value_php</code>). This card divides by ~{PHP_PER_USD_APPROX} PHP/USD so leaders see <strong>approximate US dollars</strong> (demo planning constant, not a live FX feed).
               </div>
               <div style={{ marginTop: '0.45rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                 <strong>High conversion (top slice):</strong>{' '}
