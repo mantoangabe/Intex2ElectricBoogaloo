@@ -4,12 +4,13 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import SignUpPage from './pages/SignUpPage';
+import BlogPage from './pages/BlogPage';
+import ResourcesPage from './pages/ResourcesPage';
 import DonorImpact from './pages/donor/DonorImpact';
 import DonorDashboard from './pages/donor/DonorDashboard';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import CookiePolicyPage from './pages/CookiePolicyPage';
 import CookieConsentBanner from './components/CookieConsentBanner';
-import ThemeToggle from './components/ThemeToggle';
 import RequireAuth from './components/RequireAuth';
 import RequireAdmin from './components/RequireAdmin';
 
@@ -21,6 +22,7 @@ import ProcessRecording from './pages/admin/ProcessRecording';
 import HomeVisits from './pages/admin/HomeVisits';
 import Reports from './pages/admin/Reports';
 import UserRoles from './pages/admin/UserRoles';
+import BlogManagement from './pages/admin/BlogManagement';
 
 function App() {
   return (
@@ -28,6 +30,8 @@ function App() {
       <Routes>
         {/* Public pages */}
         <Route path="/" element={<HomePage />} />
+        <Route path="/blog" element={<BlogPage />} />
+        <Route path="/resources" element={<ResourcesPage />} />
         <Route path="/donor" element={<DonorImpact />} />
         <Route path="/donor/dashboard" element={<RequireAuth><DonorDashboard /></RequireAuth>} />
         <Route path="/login" element={<LoginPage />} />
@@ -43,12 +47,12 @@ function App() {
         <Route path="/admin/home-visits" element={<RequireAdmin><HomeVisits /></RequireAdmin>} />
         <Route path="/admin/reports" element={<RequireAdmin><Reports /></RequireAdmin>} />
         <Route path="/admin/user-roles" element={<RequireAdmin><UserRoles /></RequireAdmin>} />
+        <Route path="/admin/blog" element={<RequireAdmin><BlogManagement /></RequireAdmin>} />
 
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
       <CookieConsentBanner />
-      <ThemeToggle />
     </>
   );
 }

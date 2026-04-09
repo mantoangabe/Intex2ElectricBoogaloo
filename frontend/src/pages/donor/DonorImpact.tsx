@@ -4,12 +4,14 @@ import '../../styles/styles.css';
 import '../../styles/DonorImpact.css';
 import apiClient from '../../api/apiClient';
 
-interface Donation {
-  donationId: number;
-  supporterId: number;
-  donationDate: string;
-  amount?: number;
-  estimatedValue?: number;
+interface PublicOkrs {
+  totalThisYear: number;
+  totalDonors: number;
+  partners: number;
+  residents: number;
+  safehouses: number;
+  healthCheckIns: number;
+  educationEnrollments: number;
 }
 
 export default function DonorImpact() {
@@ -22,39 +24,25 @@ export default function DonorImpact() {
   const [educationEnrollments, setEducationEnrollments] = useState<number | null>(null);
 
   useEffect(() => {
-    const currentYear = new Date().getFullYear();
-
-    apiClient.get<Donation[]>('/Donations', { params: { take: 10000 } })
-      .then(res => {
-        const yearDonations = res.data.filter(
-          d => new Date(d.donationDate).getFullYear() === currentYear
-        );
-        setTotalThisYear(
-          yearDonations.reduce((sum, d) => sum + (d.amount ?? d.estimatedValue ?? 0), 0)
-        );
-        setTotalDonors(new Set(res.data.map(d => d.supporterId)).size);
+    apiClient.get<PublicOkrs>('/PublicImpact/okrs')
+      .then((res) => {
+        setTotalThisYear(res.data.totalThisYear ?? 0);
+        setTotalDonors(res.data.totalDonors ?? 0);
+        setPartners(res.data.partners ?? 0);
+        setResidentCount(res.data.residents ?? 0);
+        setSafehouseCount(res.data.safehouses ?? 0);
+        setHealthCheckIns(res.data.healthCheckIns ?? 0);
+        setEducationEnrollments(res.data.educationEnrollments ?? 0);
       })
-      .catch(() => { setTotalThisYear(0); setTotalDonors(0); });
-
-    apiClient.get('/Partners', { params: { take: 10000 } })
-      .then(r => setPartners(r.data.length))
-      .catch(() => setPartners(null));
-
-    apiClient.get('/Residents', { params: { take: 10000 } })
-      .then(r => setResidentCount(r.data.length))
-      .catch(() => setResidentCount(null));
-
-    apiClient.get('/Safehouses', { params: { take: 10000 } })
-      .then(r => setSafehouseCount(r.data.length))
-      .catch(() => setSafehouseCount(null));
-
-    apiClient.get('/HealthWellbeingRecords', { params: { take: 10000 } })
-      .then(r => setHealthCheckIns(r.data.length))
-      .catch(() => setHealthCheckIns(null));
-
-    apiClient.get('/EducationRecords', { params: { take: 10000 } })
-      .then(r => setEducationEnrollments(r.data.length))
-      .catch(() => setEducationEnrollments(null));
+      .catch(() => {
+        setTotalThisYear(0);
+        setTotalDonors(0);
+        setPartners(0);
+        setResidentCount(0);
+        setSafehouseCount(0);
+        setHealthCheckIns(0);
+        setEducationEnrollments(0);
+      });
   }, []);
 
   const fmt = (val: number | null) => val === null ? '...' : val.toLocaleString();

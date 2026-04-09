@@ -1,0 +1,119 @@
+.resources-page-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, #f6fbf8 0%, #ffffff 26%, #f6f4ef 100%);
+}
+
+.resources-page-main {
+  width: min(1120px, calc(100% - 2rem));
+  margin: 0 auto;
+  padding: 2.5rem 0 4rem;
+  flex: 1;
+}
+
+.resources-hero {
+  background: linear-gradient(135deg, rgba(54, 96, 65, 0.09), rgba(0, 0, 0, 0.02));
+  border: 1px solid rgba(54, 96, 65, 0.12);
+  border-radius: 24px;
+  padding: 2rem;
+  margin-bottom: 1.75rem;
+}
+
+.resources-kicker {
+  margin: 0 0 0.4rem;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 0.78rem;
+  color: var(--primary-dark);
+  font-weight: 700;
+}
+
+.resources-hero h1 {
+  margin: 0;
+  font-size: clamp(2.25rem, 4vw, 3.5rem);
+  color: var(--text);
+}
+
+.resources-hero p {
+  margin: 0.8rem 0 0;
+  max-width: 70ch;
+  color: var(--text-muted);
+  line-height: 1.7;
+}
+
+.resources-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.75fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.resources-content {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.resources-sidebar {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.resources-card,
+.resources-sidebar-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  box-shadow: var(--shadow-sm);
+  padding: 1.5rem;
+}
+
+.resources-card h2,
+.resources-sidebar-card h2 {
+  margin: 0 0 0.8rem;
+  color: var(--text);
+  font-size: 1.35rem;
+}
+
+.resources-card ul {
+  margin: 0;
+  padding-left: 1.2rem;
+  color: var(--text);
+}
+
+.resources-card li {
+  margin-bottom: 0.85rem;
+  line-height: 1.7;
+}
+
+.resources-card p,
+.resources-sidebar-card p {
+  margin: 0;
+  color: var(--text);
+  line-height: 1.75;
+}
+
+.resources-contact-card a {
+  color: var(--primary-dark);
+  font-weight: 700;
+}
+
+@media (max-width: 900px) {
+  .resources-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .resources-page-main {
+    width: min(100% - 1rem, 1120px);
+    padding-top: 1rem;
+  }
+
+  .resources-hero,
+  .resources-card,
+  .resources-sidebar-card {
+    border-radius: 16px;
+    padding: 1.25rem;
+  }
+}
