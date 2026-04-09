@@ -1,10 +1,12 @@
 using backend.Data;
 using backend.Middleware;
 using backend.Models;
+using DotNetEnv;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
+Env.NoClobber().Load(Path.Combine(Directory.GetCurrentDirectory(), ".env"));
 var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
