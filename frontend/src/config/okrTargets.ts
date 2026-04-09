@@ -2,7 +2,7 @@ export type OkrMetricKey =
   | 'highLapseCount'
   | 'highLowProgressCount'
   | 'highIncidentCount'
-  | 'avgPredictedDonationPhp';
+  | 'avgPredictedDonationUsd';
 
 export interface OkrDefinition {
   id: string;
@@ -11,7 +11,7 @@ export interface OkrDefinition {
   owner: string;
   period: string;
   metricKey: OkrMetricKey;
-  unit: 'count' | 'php';
+  unit: 'count' | 'usd';
   direction: 'lower' | 'higher';
   baseline: number;
   target: number;
@@ -60,8 +60,8 @@ export const OKR_DEFINITIONS: OkrDefinition[] = [
     keyResult: 'Increase average predicted donation value per top post',
     owner: 'Marketing Lead',
     period: 'Q2 2026',
-    metricKey: 'avgPredictedDonationPhp',
-    unit: 'php',
+    metricKey: 'avgPredictedDonationUsd',
+    unit: 'usd',
     direction: 'higher',
     baseline: 22000,
     target: 28000,
