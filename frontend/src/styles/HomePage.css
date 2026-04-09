@@ -51,8 +51,8 @@
 }
 
 .btn-primary {
-  background: var(--white);
-  color: var(--primary);
+  background: var(--primary);
+  color: var(--white);
 }
 
 .btn-primary:hover {
@@ -61,13 +61,13 @@
 }
 
 .btn-outline {
-  background: transparent;
+  background: var(--primary);
   color: var(--white);
-  border: 2px solid var(--white);
+  border: 2px solid var(--primary);
 }
 
 .btn-outline:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--primary-dark);
   transform: translateY(-2px);
 }
 
