@@ -5,6 +5,8 @@ import '../styles/Navbar.css';
 
 const publicNavLinks = [
   { label: 'Home', path: '/' },
+  { label: 'Blog', path: '/blog' },
+  { label: 'Resources', path: '/resources' },
   { label: 'Impact', path: '/donor' },
   { label: 'Donate', path: '/donor/dashboard' },
 ];

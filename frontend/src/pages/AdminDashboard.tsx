@@ -17,6 +17,13 @@ const SOCIAL_TOP_COUNT = 50;
 /** Posts in the top-N-by-predicted-value slice with strong conversion probability (model output). */
 const HIGH_CONVERSION_THRESHOLD = 0.5;
 
+interface AdminOverviewMetrics {
+  residentCount: number;
+  supporterCount: number;
+  donationTotal: number;
+  safehouseCount: number;
+}
+
 export default function AdminDashboard() {
   const [residentCount, setResidentCount] = useState<number | null>(null);
   const [supporterCount, setSupporterCount] = useState<number | null>(null);
@@ -33,14 +40,20 @@ export default function AdminDashboard() {
   const socialMeta = usePredictionMeta('/SocialDonationPredictions/meta/latest', ENABLE_ML_PREDICTIONS);
 
   useEffect(() => {
-    apiClient.get('/Residents').then(r => setResidentCount(r.data.length));
-    apiClient.get('/Supporters').then(r => setSupporterCount(r.data.length));
-    apiClient.get('/Donations').then(r => {
-      const total = r.data.reduce((sum: number, d: { amount?: number; estimatedValue?: number }) =>
-        sum + (d.amount ?? d.estimatedValue ?? 0), 0);
-      setDonationTotal(total);
-    });
-    apiClient.get('/Safehouses').then(r => setSafehouseCount(r.data.length));
+    apiClient.get<AdminOverviewMetrics>('/AdminMetrics/overview')
+      .then(r => {
+        setResidentCount(r.data.residentCount);
+        setSupporterCount(r.data.supporterCount);
+        setDonationTotal(r.data.donationTotal);
+        setSafehouseCount(r.data.safehouseCount);
+      })
+      .catch(() => {
+        setResidentCount(null);
+        setSupporterCount(null);
+        setDonationTotal(null);
+        setSafehouseCount(null);
+      });
+
     if (ENABLE_ML_PREDICTIONS) {
       apiClient.get<DonorRetentionPrediction[]>('/DonorRetentionPredictions', { params: { take: PREDICTION_TAKE, latestOnly: true } })
         .then(r => setHighLapseCount(r.data.filter(x => x.lapseRiskProbability >= 0.66).length))

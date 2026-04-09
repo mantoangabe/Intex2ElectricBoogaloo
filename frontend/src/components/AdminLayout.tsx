@@ -14,6 +14,7 @@ const navItems = [
   { label: 'Home Visits', path: '/admin/home-visits' },
   { label: 'Donors & Contributions', path: '/admin/donors' },
   { label: 'User Roles', path: '/admin/user-roles' },
+    { label: 'Blog Management', path: '/admin/blog' },
   { label: 'Reports & Analytics', path: '/admin/reports' },
 ];
 

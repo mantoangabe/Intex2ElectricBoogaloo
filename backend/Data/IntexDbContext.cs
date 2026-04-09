@@ -32,4 +32,5 @@ public class IntexDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<ResidentProgressPrediction> ResidentProgressPredictions { get; set; } = null!;
     public DbSet<IncidentRiskPrediction> IncidentRiskPredictions { get; set; } = null!;
     public DbSet<SocialDonationPrediction> SocialDonationPredictions { get; set; } = null!;
+    public DbSet<BlogPost> BlogPosts { get; set; } = null!;
 }
