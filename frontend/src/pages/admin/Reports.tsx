@@ -79,7 +79,6 @@ export default function Reports() {
   const [draftUrgency, setDraftUrgency] = useState(false);
   const [draftImpactStory, setDraftImpactStory] = useState(true);
   const [draftWordCount, setDraftWordCount] = useState(120);
-  const [refreshingSocial, setRefreshingSocial] = useState(false);
 
   const fetchMetrics = (pageVal: number, size: number, safehouse = safehouseFilter) => {
     setLoading(true);
@@ -192,27 +191,6 @@ export default function Reports() {
       }
     }
   };
-  const refreshSocialPredictions = async () => {
-    setRefreshingSocial(true);
-    try {
-      await apiClient.post("/SocialDonationPredictions/refresh-demo");
-      const refreshed = await apiClient.get<SocialDonationPrediction[]>(
-        "/SocialDonationPredictions",
-        {
-          params: {
-            take: TOP_SOCIAL_POST_COUNT,
-            latestOnly: true,
-            sort: "value_desc",
-          },
-        },
-      );
-      setSocialPredictions(refreshed.data);
-    } catch {
-      alert("Failed to refresh social prediction scoring batch.");
-    } finally {
-      setRefreshingSocial(false);
-    }
-  };
 
   const highProgressRisk = progressPredictions.filter(
     (p) => p.lowProgressRiskProbability >= 0.66,
@@ -288,8 +266,10 @@ export default function Reports() {
     if (draftHasCta) estimate += 60;
     if (draftUrgency) estimate += 35;
     if (draftImpactStory) estimate += 55;
-    if (draftWordCount >= 80 && draftWordCount <= 220) estimate += 40;
-    if (draftWordCount < 40 || draftWordCount > 320) estimate -= 30;
+    const idealWordCount = 150;
+    const wordDistance = Math.abs(draftWordCount - idealWordCount);
+    const wordEffect = Math.max(-120, 65 - wordDistance * 0.55);
+    estimate += wordEffect;
     const scoreAdjustment = (draftScore - 50) * 2.1;
     return Math.max(25, estimate + scoreAdjustment);
   })();
@@ -346,6 +326,91 @@ export default function Reports() {
           <option value="7">Safehouse 7</option>
         </select>
       </div>
+
+      {ENABLE_ML_PREDICTIONS && (
+        <div className="admin-card">
+          <h3>Post Draft Scorer</h3>
+          <p style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>
+            Planning aid for social media campaign drafting.
+          </p>
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="reports-draft-platform">Platform</label>
+              <select
+                id="reports-draft-platform"
+                value={draftPlatform}
+                onChange={(e) => setDraftPlatform(e.target.value)}
+              >
+                <option>Facebook</option>
+                <option>Instagram</option>
+                <option>WhatsApp</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label htmlFor="reports-draft-post-type">Post Type</label>
+              <select
+                id="reports-draft-post-type"
+                value={draftPostType}
+                onChange={(e) => setDraftPostType(e.target.value)}
+              >
+                <option>FundraisingAppeal</option>
+                <option>Awareness</option>
+                <option>Update</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label htmlFor="reports-draft-word-count">
+                Caption Word Count
+              </label>
+              <input
+                id="reports-draft-word-count"
+                type="number"
+                value={draftWordCount}
+                onChange={(e) => setDraftWordCount(Number(e.target.value) || 0)}
+              />
+            </div>
+          </div>
+          <div className="form-row">
+            <label>
+              <input
+                type="checkbox"
+                checked={draftHasCta}
+                onChange={(e) => setDraftHasCta(e.target.checked)}
+              />{" "}
+              Has donation CTA
+            </label>
+            <label>
+              <input
+                type="checkbox"
+                checked={draftUrgency}
+                onChange={(e) => setDraftUrgency(e.target.checked)}
+              />{" "}
+              Uses urgency language
+            </label>
+            <label>
+              <input
+                type="checkbox"
+                checked={draftImpactStory}
+                onChange={(e) => setDraftImpactStory(e.target.checked)}
+              />{" "}
+              Includes impact story
+            </label>
+          </div>
+          <div style={{ marginTop: "0.9rem" }}>
+            <strong>Estimated Donation Potential:</strong> {draftTier} (
+            {draftScore}/100)
+            <div style={{ marginTop: "0.35rem" }}>
+              <strong>Estimated Donation Amount:</strong>{" "}
+              {fmtUsd(draftPredictedDonation)}
+            </div>
+            <ul style={{ marginTop: "0.5rem" }}>
+              {draftActions.map((a) => (
+                <li key={a}>{a}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
 
       <div className="admin-card">
         <div
@@ -628,109 +693,6 @@ export default function Reports() {
           </div>
 
         </>
-      )}
-
-      {ENABLE_ML_PREDICTIONS && (
-        <div className="admin-card">
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <h3>Post Draft Scorer (Planning Heuristic)</h3>
-            <button
-              className="btn btn-secondary btn-sm"
-              onClick={refreshSocialPredictions}
-              disabled={refreshingSocial}
-            >
-              {refreshingSocial
-                ? "Refreshing scoring..."
-                : "Run Social Scoring (No Redeploy)"}
-            </button>
-          </div>
-          <p style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>
-            Frontend planning aid for campaign drafting. This is not direct
-            model inference.
-          </p>
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="reports-draft-platform">Platform</label>
-              <select
-                id="reports-draft-platform"
-                value={draftPlatform}
-                onChange={(e) => setDraftPlatform(e.target.value)}
-              >
-                <option>Facebook</option>
-                <option>Instagram</option>
-                <option>WhatsApp</option>
-              </select>
-            </div>
-            <div className="form-group">
-              <label htmlFor="reports-draft-post-type">Post Type</label>
-              <select
-                id="reports-draft-post-type"
-                value={draftPostType}
-                onChange={(e) => setDraftPostType(e.target.value)}
-              >
-                <option>FundraisingAppeal</option>
-                <option>Awareness</option>
-                <option>Update</option>
-              </select>
-            </div>
-            <div className="form-group">
-              <label htmlFor="reports-draft-word-count">
-                Caption Word Count
-              </label>
-              <input
-                id="reports-draft-word-count"
-                type="number"
-                value={draftWordCount}
-                onChange={(e) => setDraftWordCount(Number(e.target.value) || 0)}
-              />
-            </div>
-          </div>
-          <div className="form-row">
-            <label>
-              <input
-                type="checkbox"
-                checked={draftHasCta}
-                onChange={(e) => setDraftHasCta(e.target.checked)}
-              />{" "}
-              Has donation CTA
-            </label>
-            <label>
-              <input
-                type="checkbox"
-                checked={draftUrgency}
-                onChange={(e) => setDraftUrgency(e.target.checked)}
-              />{" "}
-              Uses urgency language
-            </label>
-            <label>
-              <input
-                type="checkbox"
-                checked={draftImpactStory}
-                onChange={(e) => setDraftImpactStory(e.target.checked)}
-              />{" "}
-              Includes impact story
-            </label>
-          </div>
-          <div style={{ marginTop: "0.9rem" }}>
-            <strong>Estimated Donation Potential:</strong> {draftTier} (
-            {draftScore}/100)
-            <div style={{ marginTop: "0.35rem" }}>
-              <strong>Estimated Donation Amount (heuristic):</strong>{" "}
-              {fmtUsd(draftPredictedDonation)}
-            </div>
-            <ul style={{ marginTop: "0.5rem" }}>
-              {draftActions.map((a) => (
-                <li key={a}>{a}</li>
-              ))}
-            </ul>
-          </div>
-        </div>
       )}
 
       {/* Metric Modal */}
