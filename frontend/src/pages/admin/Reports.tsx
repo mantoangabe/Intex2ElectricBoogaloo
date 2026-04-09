@@ -1,11 +1,10 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import AdminLayout from "../../components/AdminLayout";
 import "../../styles/styles.css";
+import "../../styles/AdminDashboard.css";
 import apiClient from "../../api/apiClient";
-import LastRefreshChip from "../../components/LastRefreshChip";
 import { ENABLE_ML_PREDICTIONS } from "../../config/features";
 import { OKR_DEFINITIONS } from "../../config/okrTargets";
-import { usePredictionMeta } from "../../hooks/usePredictionMeta";
 import type {
   DonorRetentionPrediction,
   IncidentRiskPrediction,
@@ -27,21 +26,28 @@ interface SafehouseMonthlyMetric {
   notes: string;
 }
 
+interface SafehouseMonthSummary {
+  safehouseId: number;
+  safehouseName: string;
+  monthStart: string;
+  monthEnd: string;
+  metricId: number | null;
+  activeResidents: number;
+  avgEducationProgress: number | null;
+  avgHealthScore: number | null;
+}
+
+const PREDICTION_TAKE = 50000;
+const TOP_SOCIAL_POST_COUNT = 25;
+
 export default function Reports() {
-  const DEFAULT_PAGE_SIZE = 5;
-  const TOP_SOCIAL_POST_COUNT = 25;
-  const parsePageSize = (value: string, total: number) =>
-    value === "all" ? Math.max(total, 1) : Number(value);
-  const [metrics, setMetrics] = useState<SafehouseMonthlyMetric[]>([]);
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
-  const [totalCount, setTotalCount] = useState(0);
-  const [jumpPage, setJumpPage] = useState("1");
-  const [metricSortDir, setMetricSortDir] = useState<"asc" | "desc">("asc");
-  const [safehouseFilter, setSafehouseFilter] = useState("all");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [hasMore, setHasMore] = useState(false);
+  const [monthSummary, setMonthSummary] = useState<SafehouseMonthSummary[]>([]);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [yearMonthReady, setYearMonthReady] = useState(false);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [summaryError, setSummaryError] = useState<string | null>(null);
+
   const [progressPredictions, setProgressPredictions] = useState<
     ResidentProgressPrediction[]
   >([]);
@@ -54,18 +60,6 @@ export default function Reports() {
   const [donorPredictions, setDonorPredictions] = useState<
     DonorRetentionPrediction[]
   >([]);
-  const progressMeta = usePredictionMeta(
-    "/ResidentProgressPredictions/meta/latest",
-    ENABLE_ML_PREDICTIONS,
-  );
-  const incidentMeta = usePredictionMeta(
-    "/IncidentRiskPredictions/meta/latest",
-    ENABLE_ML_PREDICTIONS,
-  );
-  const socialMeta = usePredictionMeta(
-    "/SocialDonationPredictions/meta/latest",
-    ENABLE_ML_PREDICTIONS,
-  );
 
   const [showModal, setShowModal] = useState(false);
   const [editMetric, setEditMetric] = useState<SafehouseMonthlyMetric | null>(
@@ -80,74 +74,78 @@ export default function Reports() {
   const [draftImpactStory, setDraftImpactStory] = useState(true);
   const [draftWordCount, setDraftWordCount] = useState(120);
 
-  const fetchMetrics = (pageVal: number, size: number, safehouse = safehouseFilter) => {
-    setLoading(true);
-    const params: Record<string, number> = {
-      skip: (pageVal - 1) * size,
-      take: size,
-    };
-    if (safehouse !== "all") {
-      params.safehouseId = Number(safehouse);
-    }
+  const loadMonthSummary = useCallback(() => {
+    setSummaryLoading(true);
     apiClient
-      .get<SafehouseMonthlyMetric[]>("/SafehouseMonthlyMetrics", {
-        params,
+      .get<SafehouseMonthSummary[]>("/SafehouseMonthlyMetrics/month-summary", {
+        params: { year: selectedYear, month: selectedMonth },
       })
       .then((res) => {
-        setHasMore(res.data.length === size);
-        setMetrics(res.data);
-        setError(null);
+        setMonthSummary(res.data);
+        setSummaryError(null);
       })
-      .catch(() => setError("Failed to load metrics."))
-      .finally(() => setLoading(false));
-  };
+      .catch(() => setSummaryError("Failed to load safehouse metrics for this month."))
+      .finally(() => setSummaryLoading(false));
+  }, [selectedYear, selectedMonth]);
 
   useEffect(() => {
-    fetchMetrics(1, pageSize, safehouseFilter);
-    const countParams: Record<string, number> = { skip: 0, take: 100000 };
-    if (safehouseFilter !== "all") {
-      countParams.safehouseId = Number(safehouseFilter);
-    }
     apiClient
       .get<SafehouseMonthlyMetric[]>("/SafehouseMonthlyMetrics", {
-        params: countParams,
+        params: { skip: 0, take: 1 },
       })
-      .then((r) => setTotalCount(r.data.length))
-      .catch(() => {});
-    if (ENABLE_ML_PREDICTIONS) {
-      apiClient
-        .get<ResidentProgressPrediction[]>("/ResidentProgressPredictions", {
-          params: { take: 1000, latestOnly: true },
-        })
-        .then((res) => setProgressPredictions(res.data))
-        .catch(() => setProgressPredictions([]));
-      apiClient
-        .get<IncidentRiskPrediction[]>("/IncidentRiskPredictions", {
-          params: { take: 1000, latestOnly: true },
-        })
-        .then((res) => setIncidentPredictions(res.data))
-        .catch(() => setIncidentPredictions([]));
-      apiClient
-        .get<SocialDonationPrediction[]>("/SocialDonationPredictions", {
-          params: {
-            take: TOP_SOCIAL_POST_COUNT,
-            latestOnly: true,
-            sort: "value_desc",
-          },
-        })
-        .then((res) => setSocialPredictions(res.data))
-        .catch(() => setSocialPredictions([]));
-      apiClient
-        .get<DonorRetentionPrediction[]>("/DonorRetentionPredictions", {
-          params: { take: 1000, latestOnly: true },
-        })
-        .then((res) => setDonorPredictions(res.data))
-        .catch(() => setDonorPredictions([]));
-    }
-  }, [safehouseFilter]);
+      .then((r) => {
+        if (r.data[0]?.monthStart) {
+          const d = new Date(r.data[0].monthStart);
+          setSelectedYear(d.getFullYear());
+          setSelectedMonth(d.getMonth() + 1);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setYearMonthReady(true));
+  }, []);
+
+  useEffect(() => {
+    if (!yearMonthReady) return;
+    loadMonthSummary();
+  }, [yearMonthReady, loadMonthSummary]);
+
+  useEffect(() => {
+    if (!ENABLE_ML_PREDICTIONS) return;
+    apiClient
+      .get<ResidentProgressPrediction[]>("/ResidentProgressPredictions", {
+        params: { take: PREDICTION_TAKE, latestOnly: true },
+      })
+      .then((res) => setProgressPredictions(res.data))
+      .catch(() => setProgressPredictions([]));
+    apiClient
+      .get<IncidentRiskPrediction[]>("/IncidentRiskPredictions", {
+        params: { take: PREDICTION_TAKE, latestOnly: true },
+      })
+      .then((res) => setIncidentPredictions(res.data))
+      .catch(() => setIncidentPredictions([]));
+    apiClient
+      .get<SocialDonationPrediction[]>("/SocialDonationPredictions", {
+        params: {
+          take: TOP_SOCIAL_POST_COUNT,
+          latestOnly: true,
+          sort: "value_desc",
+        },
+      })
+      .then((res) => setSocialPredictions(res.data))
+      .catch(() => setSocialPredictions([]));
+    apiClient
+      .get<DonorRetentionPrediction[]>("/DonorRetentionPredictions", {
+        params: { take: PREDICTION_TAKE, latestOnly: true },
+      })
+      .then((res) => setDonorPredictions(res.data))
+      .catch(() => setDonorPredictions([]));
+  }, []);
 
   const fmtUsd = (value: number) =>
     `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+  const fmtPhp = (value: number) =>
+    `₱${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   const openModal = (metric: SafehouseMonthlyMetric | null) => {
     setEditMetric(metric);
@@ -161,6 +159,36 @@ export default function Reports() {
     setFormData({});
   };
 
+  const openEditByMetricId = async (metricId: number) => {
+    try {
+      const res = await apiClient.get<SafehouseMonthlyMetric>(
+        `/SafehouseMonthlyMetrics/${metricId}`,
+      );
+      openModal(res.data);
+    } catch {
+      alert("Failed to load metric.");
+    }
+  };
+
+  const openCreateForSafehouse = (safehouseId: number) => {
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const monthStart = `${selectedYear}-${pad(selectedMonth)}-01`;
+    const lastDay = new Date(selectedYear, selectedMonth, 0).getDate();
+    const monthEnd = `${selectedYear}-${pad(selectedMonth)}-${pad(lastDay)}`;
+    setEditMetric(null);
+    setFormData({
+      safehouseId,
+      monthStart,
+      monthEnd,
+      activeResidents: 0,
+      processRecordingCount: 0,
+      homeVisitationCount: 0,
+      incidentCount: 0,
+      notes: "",
+    });
+    setShowModal(true);
+  };
+
   const saveMetric = async () => {
     setSaving(true);
     try {
@@ -172,9 +200,9 @@ export default function Reports() {
       } else {
         await apiClient.post("/SafehouseMonthlyMetrics", formData);
       }
-      fetchMetrics(1, pageSize);
+      loadMonthSummary();
       closeModal();
-    } catch (err) {
+    } catch {
       alert("Failed to save metric.");
     } finally {
       setSaving(false);
@@ -185,8 +213,8 @@ export default function Reports() {
     if (window.confirm("Delete this metric?")) {
       try {
         await apiClient.delete(`/SafehouseMonthlyMetrics/${id}`);
-        fetchMetrics(page, pageSize);
-      } catch (err) {
+        loadMonthSummary();
+      } catch {
         alert("Failed to delete metric.");
       }
     }
@@ -211,10 +239,13 @@ export default function Reports() {
     highLapseCount,
     highLowProgressCount: highProgressRisk,
     highIncidentCount: highIncidentRisk,
-    avgPredictedDonationUsd: topSocialAvg,
+    avgPredictedDonationPhp: topSocialAvg,
   };
-  const fmtMetric = (value: number, unit: "count" | "usd") =>
-    unit === "usd" ? fmtUsd(value) : value.toLocaleString();
+  const fmtMetric = (value: number, unit: "count" | "php") =>
+    unit === "php" ? fmtPhp(value) : value.toLocaleString();
+  const fmtVariance = (value: number, unit: "count" | "php") =>
+    unit === "php" ? fmtPhp(value) : value.toLocaleString();
+
   const okrRows = OKR_DEFINITIONS.map((def) => {
     const actual = okrActuals[def.metricKey];
     const ratio =
@@ -228,6 +259,7 @@ export default function Reports() {
       progress >= 1 ? "On Track" : progress >= 0.85 ? "Watch" : "At Risk";
     return { ...def, actual, progress, variance, status };
   });
+
   const draftScore = (() => {
     let score = 45;
     if (draftPlatform === "Facebook") score += 6;
@@ -273,13 +305,13 @@ export default function Reports() {
     const scoreAdjustment = (draftScore - 50) * 2.1;
     return Math.max(25, estimate + scoreAdjustment);
   })();
-  const sortedMetrics = [...metrics].sort((a, b) =>
-    metricSortDir === "asc"
-      ? a.safehouseId - b.safehouseId
-      : b.safehouseId - a.safehouseId,
+
+  const monthLabel = new Date(selectedYear, selectedMonth - 1, 1).toLocaleDateString(
+    "en-US",
+    { year: "numeric", month: "long" },
   );
-  const pageSizeSelectValue =
-    totalCount > 0 && pageSize >= totalCount ? "all" : String(pageSize);
+
+  const yearOptions = Array.from({ length: 8 }, (_, i) => new Date().getFullYear() - 3 + i);
 
   return (
     <AdminLayout title="Reports & Analytics">
@@ -293,39 +325,102 @@ export default function Reports() {
         </button>
       </div>
 
-      <div className="filter-bar">
-        <input
-          type="date"
-          className="filter-input"
-          aria-label="From date"
-          placeholder="From date"
-        />
-        <input
-          type="date"
-          className="filter-input"
-          aria-label="To date"
-          placeholder="To date"
-        />
-        <select
-          className="filter-select"
-          aria-label="Filter by safehouse"
-          value={safehouseFilter}
-          onChange={(e) => {
-            setSafehouseFilter(e.target.value);
-            setPage(1);
-            setJumpPage("1");
-          }}
-        >
-          <option value="all">All Safehouses</option>
-          <option value="1">Safehouse 1</option>
-          <option value="2">Safehouse 2</option>
-          <option value="3">Safehouse 3</option>
-          <option value="4">Safehouse 4</option>
-          <option value="5">Safehouse 5</option>
-          <option value="6">Safehouse 6</option>
-          <option value="7">Safehouse 7</option>
-        </select>
-      </div>
+      {ENABLE_ML_PREDICTIONS && (
+        <div className="admin-card">
+          <h3>OKR Tracker (Target vs Actual)</h3>
+          <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", marginTop: 0 }}>
+            Current actuals use the latest scored prediction batch (same logic as the admin dashboard).
+          </p>
+          <div className="metrics-grid" style={{ marginTop: "1rem" }}>
+            {okrRows.map((row) => (
+              <div key={row.id} className="metric-card">
+                <div
+                  style={{
+                    fontSize: "0.78rem",
+                    fontWeight: 700,
+                    color: "var(--text-muted)",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.04em",
+                    marginBottom: "0.35rem",
+                  }}
+                >
+                  {row.objective}
+                </div>
+                <div style={{ fontWeight: 700, marginBottom: "0.75rem", lineHeight: 1.35 }}>
+                  {row.keyResult}
+                </div>
+                <dl
+                  style={{
+                    margin: 0,
+                    display: "grid",
+                    gridTemplateColumns: "auto 1fr",
+                    gap: "0.25rem 0.75rem",
+                    fontSize: "0.88rem",
+                    alignItems: "baseline",
+                  }}
+                >
+                  <dt style={{ color: "var(--text-muted)" }}>Owner</dt>
+                  <dd style={{ margin: 0 }}>{row.owner}</dd>
+                  <dt style={{ color: "var(--text-muted)" }}>Period</dt>
+                  <dd style={{ margin: 0 }}>{row.period}</dd>
+                  <dt style={{ color: "var(--text-muted)" }}>Baseline</dt>
+                  <dd style={{ margin: 0 }}>{fmtMetric(row.baseline, row.unit)}</dd>
+                  <dt style={{ color: "var(--text-muted)" }}>Target</dt>
+                  <dd style={{ margin: 0 }}>{fmtMetric(row.target, row.unit)}</dd>
+                </dl>
+                <div
+                  className="metric-value"
+                  style={{ fontSize: "1.85rem", marginTop: "0.75rem" }}
+                >
+                  {fmtMetric(row.actual, row.unit)}
+                </div>
+                <div className="metric-label">Actual</div>
+                <div style={{ marginTop: "0.5rem", fontSize: "0.88rem" }}>
+                  <span style={{ color: "var(--text-muted)" }}>Variance: </span>
+                  <strong>{fmtVariance(row.variance, row.unit)}</strong>
+                </div>
+                <div style={{ marginTop: "0.65rem" }}>
+                  <span
+                    style={{
+                      display: "inline-block",
+                      minWidth: 72,
+                      textAlign: "center",
+                      borderRadius: 999,
+                      padding: "0.2rem 0.55rem",
+                      background:
+                        row.status === "On Track"
+                          ? "#dcfce7"
+                          : row.status === "Watch"
+                            ? "#fef9c3"
+                            : "#fee2e2",
+                      color:
+                        row.status === "On Track"
+                          ? "#166534"
+                          : row.status === "Watch"
+                            ? "#713f12"
+                            : "#7f1d1d",
+                      fontWeight: 700,
+                      fontSize: "0.85rem",
+                    }}
+                  >
+                    {row.status}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div
+            style={{
+              marginTop: "0.75rem",
+              color: "var(--text-muted)",
+              fontSize: "0.8rem",
+            }}
+          >
+            OKR note: targets and baselines are planning numbers; adjust in code config as leadership
+            refines goals.
+          </div>
+        </div>
+      )}
 
       {ENABLE_ML_PREDICTIONS && (
         <div className="admin-card">
@@ -400,8 +495,7 @@ export default function Reports() {
             <strong>Estimated Donation Potential:</strong> {draftTier} (
             {draftScore}/100)
             <div style={{ marginTop: "0.35rem" }}>
-              <strong>Estimated Donation Amount:</strong>{" "}
-              {fmtUsd(draftPredictedDonation)}
+              <strong>Estimated Donation Amount:</strong> {fmtUsd(draftPredictedDonation)}
             </div>
             <ul style={{ marginTop: "0.5rem" }}>
               {draftActions.map((a) => (
@@ -413,289 +507,130 @@ export default function Reports() {
       )}
 
       <div className="admin-card">
+        <h3>Safehouse Monthly Metrics</h3>
+        <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", marginTop: 0 }}>
+          One row per safehouse for the month you select. Education and health averages use stored
+          monthly values when present; otherwise they are computed from education and health records
+          dated in that month. Active residents use the stored count when a row exists, otherwise an
+          estimate from admission and closure dates.
+        </p>
         <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
+          className="filter-bar"
+          style={{ marginTop: "0.75rem", flexWrap: "wrap" }}
         >
-          <h3>Safehouse Monthly Metrics</h3>
-          <small className="refresh-chip">
-            Showing {sortedMetrics.length} of {totalCount} records
-          </small>
+          <label style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+            <span style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>Year</span>
+            <select
+              className="filter-select"
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(Number(e.target.value))}
+              aria-label="Year"
+            >
+              {yearOptions.map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+            <span style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>Month</span>
+            <select
+              className="filter-select"
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(Number(e.target.value))}
+              aria-label="Month"
+            >
+              {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                <option key={m} value={m}>
+                  {new Date(2000, m - 1, 1).toLocaleDateString("en-US", { month: "long" })}
+                </option>
+              ))}
+            </select>
+          </label>
+          <span className="refresh-chip" style={{ marginLeft: "auto" }}>
+            {summaryLoading ? "Loading…" : monthLabel}
+          </span>
         </div>
-        <table className="admin-table">
+
+        <table className="admin-table" style={{ marginTop: "1rem" }}>
           <thead>
             <tr>
-              <th>Month</th>
-              <th
-                className="clickable-th"
-                onClick={() =>
-                  setMetricSortDir((prev) => (prev === "asc" ? "desc" : "asc"))
-                }
-              >
-                Safehouse ID {metricSortDir === "asc" ? "▲" : "▼"}
-              </th>
-              <th>Active Residents</th>
-              <th>Avg Education Progress</th>
-              <th>Avg Health Score</th>
+              <th>Safehouse</th>
+              <th>Active residents</th>
+              <th>Avg education progress (%)</th>
+              <th>Avg health score</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {error && (
+            {summaryError && (
               <tr>
                 <td colSpan={5} className="placeholder-row">
-                  {error}
+                  {summaryError}
                 </td>
               </tr>
             )}
-            {metrics.length === 0 && !error && (
+            {!summaryError && monthSummary.length === 0 && !summaryLoading && (
               <tr>
                 <td colSpan={5} className="placeholder-row">
-                  No metrics recorded yet.
+                  No safehouses found.
                 </td>
               </tr>
             )}
-            {sortedMetrics.map((m) => (
-              <tr key={m.metricId}>
+            {monthSummary.map((row) => (
+              <tr key={row.safehouseId}>
                 <td>
-                  {new Date(m.monthStart).toLocaleDateString("en-US", {
-                    year: "numeric",
-                    month: "short",
-                  })}
+                  <strong>{row.safehouseName}</strong>
+                  <div style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
+                    ID {row.safehouseId}
+                  </div>
                 </td>
-                <td>{m.safehouseId}</td>
-                <td>{m.activeResidents}</td>
+                <td>{row.activeResidents}</td>
                 <td>
-                  {m.avgEducationProgress != null
-                    ? m.avgEducationProgress
+                  {row.avgEducationProgress != null
+                    ? Number(row.avgEducationProgress).toFixed(1)
                     : "—"}
                 </td>
-                <td>{m.avgHealthScore != null ? m.avgHealthScore : "—"}</td>
-                <td style={{ display: "flex", gap: "0.5rem" }}>
-                  <button
-                    className="btn btn-sm btn-secondary"
-                    onClick={() => openModal(m)}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    className="btn btn-sm btn-danger"
-                    onClick={() => deleteMetric(m.metricId!)}
-                  >
-                    Delete
-                  </button>
+                <td>
+                  {row.avgHealthScore != null
+                    ? Number(row.avgHealthScore).toFixed(2)
+                    : "—"}
+                </td>
+                <td style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                  {row.metricId != null ? (
+                    <>
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-secondary"
+                        onClick={() => openEditByMetricId(row.metricId!)}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-danger"
+                        onClick={() => deleteMetric(row.metricId!)}
+                      >
+                        Delete
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-secondary"
+                      onClick={() => openCreateForSafehouse(row.safehouseId)}
+                    >
+                      Add record
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
-        <div className="pagination-row">
-          <button
-            className="btn btn-secondary btn-sm"
-            disabled={page === 1 || loading}
-            onClick={() => {
-              const p = page - 1;
-              setPage(p);
-              fetchMetrics(p, pageSize, safehouseFilter);
-            }}
-          >
-            Previous
-          </button>
-          <span>
-            Page {page} of {Math.max(1, Math.ceil(totalCount / pageSize))}
-          </span>
-          <input
-            className="pagination-jump-input"
-            type="number"
-            aria-label="Jump to page"
-            min={1}
-            max={Math.max(1, Math.ceil(totalCount / pageSize))}
-            value={jumpPage}
-            onChange={(e) => setJumpPage(e.target.value)}
-          />
-          <button
-            className="btn btn-secondary btn-sm"
-            onClick={() => {
-              const max = Math.max(1, Math.ceil(totalCount / pageSize));
-              const p = Math.min(max, Math.max(1, Number(jumpPage) || 1));
-              setPage(p);
-              fetchMetrics(p, pageSize, safehouseFilter);
-            }}
-          >
-            Go
-          </button>
-          <select
-            className="filter-select"
-            style={{ marginLeft: "auto" }}
-            aria-label="Items per page"
-            value={pageSizeSelectValue}
-            onChange={(e) => {
-              const size = parsePageSize(e.target.value, totalCount);
-              setPageSize(size);
-              setPage(1);
-              fetchMetrics(1, size, safehouseFilter);
-            }}
-          >
-            <option value={5}>5 / page</option>
-            <option value={10}>10 / page</option>
-            <option value={25}>25 / page</option>
-            <option value={50}>50 / page</option>
-            <option value={100}>100 / page</option>
-            <option value="all">All records</option>
-          </select>
-          <button
-            className="btn btn-secondary btn-sm"
-            disabled={!hasMore || loading}
-            onClick={() => {
-              const p = page + 1;
-              setPage(p);
-              fetchMetrics(p, pageSize, safehouseFilter);
-            }}
-          >
-            Next
-          </button>
-        </div>
       </div>
 
-      {ENABLE_ML_PREDICTIONS && (
-        <>
-          <div className="admin-card">
-            <h3>OKR Tracker (Target vs Actual)</h3>
-            <table className="admin-table">
-              <thead>
-                <tr>
-                  <th>Objective</th>
-                  <th>Key Result</th>
-                  <th>Owner</th>
-                  <th>Period</th>
-                  <th>Baseline</th>
-                  <th>Target</th>
-                  <th>Actual</th>
-                  <th>Variance</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {okrRows.map((row) => (
-                  <tr key={row.id}>
-                    <td>{row.objective}</td>
-                    <td>{row.keyResult}</td>
-                    <td>{row.owner}</td>
-                    <td>{row.period}</td>
-                    <td>{fmtMetric(row.baseline, row.unit)}</td>
-                    <td>{fmtMetric(row.target, row.unit)}</td>
-                    <td>{fmtMetric(row.actual, row.unit)}</td>
-                    <td>
-                      {row.unit === "usd"
-                        ? fmtUsd(row.variance)
-                        : row.variance.toLocaleString()}
-                    </td>
-                    <td>
-                      <span
-                        style={{
-                          display: "inline-block",
-                          minWidth: 72,
-                          textAlign: "center",
-                          borderRadius: 999,
-                          padding: "0.15rem 0.45rem",
-                          background:
-                            row.status === "On Track"
-                              ? "#dcfce7"
-                              : row.status === "Watch"
-                                ? "#fef9c3"
-                                : "#fee2e2",
-                          color:
-                            row.status === "On Track"
-                              ? "#166534"
-                              : row.status === "Watch"
-                                ? "#713f12"
-                                : "#7f1d1d",
-                          fontWeight: 700,
-                        }}
-                      >
-                        {row.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <div
-              style={{
-                marginTop: "0.75rem",
-                color: "var(--text-muted)",
-                fontSize: "0.8rem",
-              }}
-            >
-              OKR note: values are tied to current scored batches;
-              targets/baselines are configurable for leadership planning.
-            </div>
-          </div>
-
-          <div className="admin-card">
-            <h3>Executive Prediction Snapshot</h3>
-            <table className="admin-table">
-              <thead>
-                <tr>
-                  <th>Signal</th>
-                  <th>Value</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>Residents in High &quot;Low Progress&quot; risk band</td>
-                  <td>{highProgressRisk}</td>
-                </tr>
-                <tr>
-                  <td>Residents in High incident risk band</td>
-                  <td>{highIncidentRisk}</td>
-                </tr>
-                <tr>
-                  <td>
-                    Avg predicted donation value across top social posts (n=
-                    {socialPredictions.length}, USD)
-                  </td>
-                  <td>{fmtUsd(topSocialAvg)}</td>
-                </tr>
-              </tbody>
-            </table>
-            <div
-              style={{
-                marginTop: "0.75rem",
-                fontSize: "0.84rem",
-                color: "var(--text-muted)",
-              }}
-            >
-              <div>
-                <strong>So what:</strong> High-risk resident counts indicate
-                likely near-term intervention load for case teams.
-              </div>
-              <div>
-                <strong>Opportunity:</strong> Social content in the top
-                predicted band suggests near-term fundraising upside.
-              </div>
-            </div>
-            <div
-              style={{
-                display: "flex",
-                gap: "0.35rem",
-                marginTop: "0.75rem",
-                flexDirection: "column",
-              }}
-            >
-              <LastRefreshChip meta={progressMeta} label="Progress" />
-              <LastRefreshChip meta={incidentMeta} label="Incident" />
-              <LastRefreshChip meta={socialMeta} label="Social donation" />
-            </div>
-          </div>
-
-        </>
-      )}
-
-      {/* Metric Modal */}
       {showModal && (
         <div className="modal-overlay" onClick={closeModal}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
@@ -715,7 +650,7 @@ export default function Reports() {
                   onChange={(e) =>
                     setFormData({
                       ...formData,
-                      safehouseId: parseInt(e.target.value) || 0,
+                      safehouseId: parseInt(e.target.value, 10) || 0,
                     })
                   }
                 />
@@ -753,7 +688,7 @@ export default function Reports() {
                   onChange={(e) =>
                     setFormData({
                       ...formData,
-                      activeResidents: parseInt(e.target.value) || 0,
+                      activeResidents: parseInt(e.target.value, 10) || 0,
                     })
                   }
                 />
@@ -803,7 +738,7 @@ export default function Reports() {
                   onChange={(e) =>
                     setFormData({
                       ...formData,
-                      processRecordingCount: parseInt(e.target.value) || 0,
+                      processRecordingCount: parseInt(e.target.value, 10) || 0,
                     })
                   }
                 />
@@ -819,7 +754,7 @@ export default function Reports() {
                   onChange={(e) =>
                     setFormData({
                       ...formData,
-                      homeVisitationCount: parseInt(e.target.value) || 0,
+                      homeVisitationCount: parseInt(e.target.value, 10) || 0,
                     })
                   }
                 />
@@ -833,7 +768,7 @@ export default function Reports() {
                   onChange={(e) =>
                     setFormData({
                       ...formData,
-                      incidentCount: parseInt(e.target.value) || 0,
+                      incidentCount: parseInt(e.target.value, 10) || 0,
                     })
                   }
                 />

@@ -21,7 +21,7 @@ public class ResidentProgressPredictionsController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<IEnumerable<ResidentProgressPrediction>>> Get(
         [FromQuery] int skip = 0,
-        [FromQuery] int take = 25,
+        [FromQuery] int take = 50000,
         [FromQuery] bool latestOnly = true,
         [FromQuery] double? minProbability = null,
         [FromQuery] string sort = "score_desc")

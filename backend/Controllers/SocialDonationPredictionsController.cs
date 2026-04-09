@@ -21,7 +21,7 @@ public class SocialDonationPredictionsController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<IEnumerable<SocialDonationPrediction>>> Get(
         [FromQuery] int skip = 0,
-        [FromQuery] int take = 25,
+        [FromQuery] int take = 50000,
         [FromQuery] bool latestOnly = true,
         [FromQuery] double? minPredictedValue = null,
         [FromQuery] string sort = "value_desc")
