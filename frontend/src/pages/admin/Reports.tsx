@@ -352,8 +352,6 @@ export default function Reports() {
           <h3>OKR Tracker (Target vs Actual)</h3>
           <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", marginTop: 0 }}>
             Current actuals use the latest scored prediction batch (same logic as the admin dashboard).
-            Objective 4 converts model output from <strong>PHP</strong> (<code>predicted_donation_value_php</code>) to{" "}
-            <strong>approximate USD</strong> for presentation (~56 PHP/USD; planning constant).
           </p>
           <div className="metrics-grid" style={{ marginTop: "1rem" }}>
             {okrRows.map((row) => (
@@ -483,9 +481,8 @@ export default function Reports() {
         <div className="admin-card">
           <h3>Post Draft Scorer</h3>
           <p style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>
-            Planning aid for social media drafting. The pipeline stores scores in <strong>PHP</strong>; we blend
-            batch predictions, apply draft controls, then convert to <strong>~USD</strong> (~56 PHP/USD) so amounts
-            match stakeholder expectations (not &quot;$22k USD per post&quot; misread from peso-scale numbers).
+            Planning Aid for Social Media Drafting. The pipeline stores scores, we blend batch predictions, apply
+            draft controls.
           </p>
           <div className="form-row">
             <div className="form-group">
@@ -554,26 +551,24 @@ export default function Reports() {
             <strong>Estimated Donation Potential:</strong> {draftPotential.tier} (
             {draftPotential.score}/100)
             <div style={{ marginTop: "0.35rem" }}>
-              <strong>Estimated Donation Amount (~USD, from PHP model):</strong>{" "}
+              <strong>Estimated Donation Amount (US dollars):</strong>{" "}
               {draftDonationFromPipeline.value != null
                 ? fmtUsd(draftDonationFromPipeline.value)
                 : "—"}
             </div>
-            <p
-              style={{
-                fontSize: "0.82rem",
-                color: "var(--text-muted)",
-                marginTop: "0.45rem",
-                lineHeight: 1.45,
-              }}
-            >
-              {draftDonationFromPipeline.source === "similar-posts" &&
-                "Base = weighted ML predictions from scored posts similar to your draft; then large swings from every dropdown/checkbox (platform through impact story). Does not re-run the Python joblib in the browser."}
-              {draftDonationFromPipeline.source === "batch-mean" &&
-                "Base = batch mean (post rows missing for similarity); controls still apply full dollar and score adjustments."}
-              {draftDonationFromPipeline.source === "none" &&
-                "No social donation predictions loaded — enable ML predictions or refresh the batch to see an estimate."}
-            </p>
+            {draftDonationFromPipeline.source === "none" && (
+              <p
+                style={{
+                  fontSize: "0.82rem",
+                  color: "var(--text-muted)",
+                  marginTop: "0.45rem",
+                  lineHeight: 1.45,
+                }}
+              >
+                No social donation predictions loaded — enable ML predictions or refresh the batch to see an
+                estimate.
+              </p>
+            )}
             <ul style={{ marginTop: "0.5rem" }}>
               {draftActions.map((a) => (
                 <li key={a}>{a}</li>

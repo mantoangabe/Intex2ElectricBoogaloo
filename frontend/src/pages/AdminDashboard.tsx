@@ -4,10 +4,7 @@ import '../styles/AdminDashboard.css';
 import apiClient from '../api/apiClient';
 import LastRefreshChip from '../components/LastRefreshChip';
 import { ENABLE_ML_PREDICTIONS } from '../config/features';
-import {
-  PHP_PER_USD_APPROX,
-  predictedDonationPhpToDisplayUsd,
-} from '../config/socialDonationDisplay';
+import { predictedDonationPhpToDisplayUsd } from '../config/socialDonationDisplay';
 import { usePredictionMeta } from '../hooks/usePredictionMeta';
 import type {
   DonorRetentionPrediction,
@@ -132,11 +129,8 @@ export default function AdminDashboard() {
             </div>
             <div className="metric-card">
               <div className="metric-value">{fmtUsdMoney(topSocialAvgUsd)}</div>
-              <div className="metric-label">Social: mean predicted donation (~USD)</div>
-              <div style={{ marginTop: '0.6rem', fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
-                Model stores <strong>PHP-scale</strong> expected lift per post (<code>predicted_donation_value_php</code>). This card divides by ~{PHP_PER_USD_APPROX} PHP/USD so leaders see <strong>approximate US dollars</strong> (demo planning constant, not a live FX feed).
-              </div>
-              <div style={{ marginTop: '0.45rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+              <div className="metric-label">Social: mean predicted donation (USD)</div>
+              <div style={{ marginTop: '0.45rem', fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: 1.45 }}>
                 <strong>High conversion (top slice):</strong>{' '}
                 {highConversionInTopSlice === null ? '...' : `${highConversionInTopSlice} posts with p(high conversion) ≥ ${HIGH_CONVERSION_THRESHOLD}`}
               </div>
@@ -148,7 +142,14 @@ export default function AdminDashboard() {
       {ENABLE_ML_PREDICTIONS && (
         <div className="admin-card">
           <h3>Prediction Refresh Status</h3>
-          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.65rem',
+              alignItems: 'flex-start',
+            }}
+          >
             <LastRefreshChip meta={donorMeta} label="Donor retention" />
             <LastRefreshChip meta={residentMeta} label="Resident progress" />
             <LastRefreshChip meta={incidentMeta} label="Incident risk" />
