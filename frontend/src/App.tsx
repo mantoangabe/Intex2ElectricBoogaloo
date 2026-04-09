@@ -10,8 +10,8 @@ import PrivacyPolicy from './pages/PrivacyPolicy';
 import CookiePolicyPage from './pages/CookiePolicyPage';
 import CookieConsentBanner from './components/CookieConsentBanner';
 import ThemeToggle from './components/ThemeToggle';
+import RequireAuth from './components/RequireAuth';
 import RequireAdmin from './components/RequireAdmin';
-import RequireDonor from './components/RequireDonor';
 
 // Admin pages
 import AdminDashboard from './pages/AdminDashboard';
@@ -29,7 +29,7 @@ function App() {
         {/* Public pages */}
         <Route path="/" element={<HomePage />} />
         <Route path="/donor" element={<DonorImpact />} />
-        <Route path="/donor/dashboard" element={<RequireDonor><DonorDashboard /></RequireDonor>} />
+        <Route path="/donor/dashboard" element={<RequireAuth><DonorDashboard /></RequireAuth>} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignUpPage />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />

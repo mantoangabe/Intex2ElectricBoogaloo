@@ -21,7 +21,7 @@ export default function Navbar({ title }: NavbarProps) {
   const isAdminLayout = title !== undefined;
 
   const visiblePublicLinks = publicNavLinks.filter((link) =>
-    link.path === '/donor/dashboard' ? isAuthenticated && !isAdmin : true,
+    link.path === '/donor/dashboard' ? isAuthenticated : true,
   );
   const navLinks = isAdmin ? [...visiblePublicLinks, { label: 'Admin', path: '/admin/dashboard' }] : visiblePublicLinks;
 

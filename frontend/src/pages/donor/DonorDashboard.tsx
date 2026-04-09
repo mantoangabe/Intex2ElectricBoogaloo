@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import Navbar from "../../components/Navbar";
 import "../../styles/styles.css";
 import apiClient from "../../api/apiClient";
+import { useAuth } from "../../auth/AuthContext";
 
 interface DonorDonationHistoryItem {
   donationId: number;
@@ -13,6 +14,7 @@ interface DonorDonationHistoryItem {
 }
 
 export default function DonorDashboard() {
+  const { isAdmin } = useAuth();
   const [donationAmount, setDonationAmount] = useState("");
   const [donationType, setDonationType] = useState("Monetary");
   const [programArea, setProgramArea] = useState("General");
@@ -37,8 +39,15 @@ export default function DonorDashboard() {
   };
 
   useEffect(() => {
+    if (isAdmin) {
+      setIsLoadingHistory(false);
+      setHistory([]);
+      setHistoryError(null);
+      return;
+    }
+
     void fetchDonationHistory();
-  }, []);
+  }, [isAdmin]);
 
   const handleDonate = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -50,6 +59,10 @@ export default function DonorDashboard() {
     }
 
     try {
+      if (isAdmin) {
+        setSubmitError("Admin accounts cannot submit donor donations from this page.");
+        return;
+      }
       setIsSubmitting(true);
       setSubmitError(null);
       await apiClient.post("/Donations/mine", {
@@ -172,6 +185,11 @@ export default function DonorDashboard() {
             <button type="submit" className="btn btn-primary">
               {isSubmitting ? "Submitting..." : "Donate Now"}
             </button>
+            {isAdmin && (
+              <p style={{ color: "var(--text-muted)", marginTop: "0.75rem", marginBottom: 0 }}>
+                Signed in as admin: donation submissions are disabled on this donor-only form.
+              </p>
+            )}
             {submitError && (
               <p style={{ color: "#c62828", marginTop: "0.75rem", marginBottom: 0 }}>
                 {submitError}
@@ -208,8 +226,16 @@ export default function DonorDashboard() {
                   </td>
                 </tr>
               )}
+              {!isLoadingHistory && isAdmin && (
+                <tr>
+                  <td colSpan={5} className="placeholder-row">
+                    Admin account: donor-specific history is only available for donor users.
+                  </td>
+                </tr>
+              )}
               {!isLoadingHistory &&
                 !historyError &&
+                !isAdmin &&
                 history.length === 0 && (
                   <tr>
                     <td colSpan={5} className="placeholder-row">
@@ -219,6 +245,7 @@ export default function DonorDashboard() {
                 )}
               {!isLoadingHistory &&
                 !historyError &&
+                !isAdmin &&
                 history.map((donation) => (
                   <tr key={donation.donationId}>
                     <td>{new Date(donation.date).toLocaleDateString()}</td>
