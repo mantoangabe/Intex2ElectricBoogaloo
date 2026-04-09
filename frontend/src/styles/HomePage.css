@@ -71,6 +71,17 @@
   transform: translateY(-2px);
 }
 
+/* ─── Journaling Section ──────────────────────────────────────────────────── */
+.journaling-section {
+  background-image: var(--journaling-bg);
+  background-attachment: fixed;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  height: 400px;
+  width: 100%;
+}
+
 /* ─── Image Section ──────────────────────────────────────────────────── */
 .image-section {
   width: 100%;

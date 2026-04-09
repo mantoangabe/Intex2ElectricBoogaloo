@@ -58,9 +58,11 @@ export default function HomePage() {
         </p>
       </section>
 
-      <section className="image-section">
-        <img src={journalingImage} alt="Journaling and support" />
-      </section>
+      <section
+        className="journaling-section"
+        style={{ '--journaling-bg': `url(${journalingImage})` } as React.CSSProperties}
+      />
+
 
       <section className="location-section">
         <h2>Where We Are Based</h2>
