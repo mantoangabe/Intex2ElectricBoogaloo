@@ -33,6 +33,8 @@ interface Donation {
 
 export default function Donors() {
   const DEFAULT_PAGE_SIZE = 25;
+  const parsePageSize = (value: string, total: number) =>
+    value === "all" ? Math.max(total, 1) : Number(value);
   const [supporters, setSupporters] = useState<Supporter[]>([]);
   const [donations, setDonations] = useState<Donation[]>([]);
   const [predictions, setPredictions] = useState<
@@ -269,6 +271,14 @@ export default function Donors() {
       const bv = String((b as any)[supporterSort.key] ?? "");
       return av.localeCompare(bv) * dir;
     });
+  const supporterPageSizeSelectValue =
+    supporterTotalCount > 0 && supporterPageSize >= supporterTotalCount
+      ? "all"
+      : String(supporterPageSize);
+  const donationPageSizeSelectValue =
+    donationTotalCount > 0 && donationPageSize >= donationTotalCount
+      ? "all"
+      : String(donationPageSize);
   const toggleSupporterSort = (key: string) =>
     setSupporterSort((prev) => ({
       key,
@@ -508,11 +518,18 @@ export default function Donors() {
                   )}
                   {ENABLE_ML_PREDICTIONS && (
                     <td>
-                      {predictions[s.supporterId]
-                        ? predictions[s.supporterId].lapseRiskProbability >= 0.5
-                          ? "Yes"
-                          : "No"
-                        : "—"}
+                      {predictions[s.supporterId] ? (
+                        <input
+                          type="checkbox"
+                          checked={
+                            predictions[s.supporterId].lapseRiskProbability >= 0.5
+                          }
+                          readOnly
+                          aria-label={`Reach out recommended for ${s.displayName}`}
+                        />
+                      ) : (
+                        "—"
+                      )}
                     </td>
                   )}
                   <td>
@@ -579,9 +596,9 @@ export default function Donors() {
               className="filter-select"
               style={{ marginLeft: "auto" }}
               aria-label="Items per page"
-              value={supporterPageSize}
+              value={supporterPageSizeSelectValue}
               onChange={(e) => {
-                const size = Number(e.target.value);
+                const size = parsePageSize(e.target.value, supporterTotalCount);
                 setSupporterPageSize(size);
                 setSupporterPage(1);
                 fetchSupporters(1, size);
@@ -590,6 +607,8 @@ export default function Donors() {
               <option value={10}>10 / page</option>
               <option value={25}>25 / page</option>
               <option value={50}>50 / page</option>
+              <option value={100}>100 / page</option>
+              <option value="all">All records</option>
             </select>
             <button
               className="btn btn-secondary btn-sm"
@@ -775,9 +794,9 @@ export default function Donors() {
               className="filter-select"
               style={{ marginLeft: "auto" }}
               aria-label="Items per page"
-              value={donationPageSize}
+              value={donationPageSizeSelectValue}
               onChange={(e) => {
-                const size = Number(e.target.value);
+                const size = parsePageSize(e.target.value, donationTotalCount);
                 setDonationPageSize(size);
                 setDonationPage(1);
                 fetchDonations(1, size);
@@ -786,6 +805,8 @@ export default function Donors() {
               <option value={10}>10 / page</option>
               <option value={25}>25 / page</option>
               <option value={50}>50 / page</option>
+              <option value={100}>100 / page</option>
+              <option value="all">All records</option>
             </select>
             <button
               className="btn btn-secondary btn-sm"

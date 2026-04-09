@@ -63,4 +63,21 @@ public class SocialDonationPredictionsController : ControllerBase
 
         return latest is null ? NotFound() : Ok(latest);
     }
+
+    [HttpPost("refresh-demo")]
+    public async Task<ActionResult<object>> RefreshDemoScoring()
+    {
+        var total = await PredictionSeedService.RefreshSocialDonationPredictionsAsync(_context);
+        var latest = await _context.SocialDonationPredictions
+            .OrderByDescending(x => x.ScoredAt)
+            .Select(x => new { x.ScoredAt, x.ModelVersion })
+            .FirstOrDefaultAsync();
+
+        return Ok(new
+        {
+            message = "Social donation predictions refreshed.",
+            totalRows = total,
+            latest
+        });
+    }
 }
