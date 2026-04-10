@@ -38,6 +38,7 @@ export default function Donors() {
     value === "all" ? Math.max(total, 1) : Number(value);
   const [supporters, setSupporters] = useState<Supporter[]>([]);
   const [donations, setDonations] = useState<Donation[]>([]);
+  const [allDonations, setAllDonations] = useState<Donation[]>([]);
   const [reachOutFilter, setReachOutFilter] = useState<"all" | "yes" | "no">(
     "all",
   );
@@ -115,13 +116,23 @@ export default function Donors() {
       .finally(() => setLoading(false));
   };
 
+  const fetchAllDonations = () => {
+    apiClient
+      .get<Donation[]>("/Donations", { params: { skip: 0, take: 100000 } })
+      .then((r) => {
+        setAllDonations(r.data);
+        setDonationTotalCount(r.data.length);
+      })
+      .catch(() => {
+        setAllDonations([]);
+        setDonationTotalCount(0);
+      });
+  };
+
   useEffect(() => {
     fetchSupporters();
     fetchDonations(1, donationPageSize);
-    apiClient
-      .get<Donation[]>("/Donations", { params: { skip: 0, take: 100000 } })
-      .then((r) => setDonationTotalCount(r.data.length))
-      .catch(() => {});
+    fetchAllDonations();
     if (ENABLE_ML_PREDICTIONS) {
       // Metadata chip still uses prediction endpoint; displayed values are DB-backed.
     }
@@ -199,6 +210,7 @@ export default function Donors() {
         await apiClient.post("/Donations", donationFormData);
       }
       fetchDonations(1, donationPageSize);
+      fetchAllDonations();
       closeDonationModal();
     } catch (err) {
       alert("Failed to save donation.");
@@ -212,13 +224,14 @@ export default function Donors() {
       try {
         await apiClient.delete(`/Donations/${id}`);
         fetchDonations(donationPage, donationPageSize);
+        fetchAllDonations();
       } catch (err) {
         alert("Failed to delete donation.");
       }
     }
   };
 
-  const totalBySupporterId = donations.reduce<Record<number, number>>(
+  const totalBySupporterId = allDonations.reduce<Record<number, number>>(
     (acc, d) => {
       const val = d.amount ?? d.estimatedValue ?? 0;
       acc[d.supporterId] = (acc[d.supporterId] ?? 0) + val;
@@ -241,7 +254,7 @@ export default function Donors() {
       }
 
       if (donationTypeFilter !== "all") {
-        const hasDonationOfType = donations.some(
+        const hasDonationOfType = allDonations.some(
           (d) => d.supporterId === s.supporterId && d.donationType === donationTypeFilter,
         );
         if (!hasDonationOfType) {
