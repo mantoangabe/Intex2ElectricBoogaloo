@@ -87,6 +87,8 @@ export default function Donors() {
   );
   const [savingDonation, setSavingDonation] = useState(false);
   const [donationTypeFilter, setDonationTypeFilter] = useState("all");
+  const [donorStatusFilter, setDonorStatusFilter] = useState("all");
+  const [donorSearchTerm, setDonorSearchTerm] = useState("");
 
   const fetchSupporters = (page: number, pageSize: number) => {
     setLoading(true);
@@ -255,6 +257,34 @@ export default function Donors() {
   );
   const donorRows = supporters
     .filter((s) => {
+      if (donorStatusFilter !== "all" && s.status !== donorStatusFilter) {
+        return false;
+      }
+
+      if (donationTypeFilter !== "all") {
+        const hasDonationOfType = donations.some(
+          (d) => d.supporterId === s.supporterId && d.donationType === donationTypeFilter,
+        );
+        if (!hasDonationOfType) {
+          return false;
+        }
+      }
+
+      const trimmedSearch = donorSearchTerm.trim().toLowerCase();
+      if (trimmedSearch) {
+        const searchableText = [
+          s.supporterId,
+          s.displayName,
+          s.email,
+          s.phone,
+        ]
+          .join(" ")
+          .toLowerCase();
+        if (!searchableText.includes(trimmedSearch)) {
+          return false;
+        }
+      }
+
       if (!ENABLE_ML_PREDICTIONS || reachOutFilter === "all") return true;
       const p = predictions[s.supporterId]?.lapseRiskProbability;
       if (p == null) return false;
@@ -336,17 +366,29 @@ export default function Donors() {
           placeholder="Search donors..."
           className="filter-input"
           aria-label="Search donors"
+          value={donorSearchTerm}
+          onChange={(e) => setDonorSearchTerm(e.target.value)}
         />
-        <select className="filter-select" aria-label="Filter by donation type">
-          <option>All Types</option>
-          <option>Monetary</option>
-          <option>In-Kind</option>
-          <option>Time/Skills</option>
+        <select
+          className="filter-select"
+          aria-label="Filter by donation type"
+          value={donationTypeFilter}
+          onChange={(e) => setDonationTypeFilter(e.target.value)}
+        >
+          <option value="all">All Types</option>
+          <option value="Monetary">Monetary</option>
+          <option value="In-Kind">In-Kind</option>
+          <option value="Time/Skills">Time/Skills</option>
         </select>
-        <select className="filter-select" aria-label="Filter by donor status">
-          <option>All Statuses</option>
-          <option>Active</option>
-          <option>Inactive</option>
+        <select
+          className="filter-select"
+          aria-label="Filter by donor status"
+          value={donorStatusFilter}
+          onChange={(e) => setDonorStatusFilter(e.target.value)}
+        >
+          <option value="all">All Statuses</option>
+          <option value="Active">Active</option>
+          <option value="Inactive">Inactive</option>
         </select>
         {ENABLE_ML_PREDICTIONS && (
           <select
@@ -864,9 +906,8 @@ export default function Donors() {
               </div>
               <div className="form-group">
                 <label htmlFor="supporter-status">Status</label>
-                <input
+                <select
                   id="supporter-status"
-                  type="text"
                   value={supporterFormData.status ?? ""}
                   onChange={(e) =>
                     setSupporterFormData({
@@ -874,7 +915,11 @@ export default function Donors() {
                       status: e.target.value,
                     })
                   }
-                />
+                >
+                  <option value="">Select status...</option>
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                </select>
               </div>
               <div className="form-group">
                 <label htmlFor="supporter-relationship-type">

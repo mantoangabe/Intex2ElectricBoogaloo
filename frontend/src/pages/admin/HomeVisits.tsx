@@ -43,6 +43,12 @@ export default function HomeVisits() {
       ) * dir
     );
   });
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const upcomingConferences = sortedVisits.filter(
+    (v) => new Date(v.visitDate) > today,
+  );
+  const homeVisitRows = sortedVisits.filter((v) => new Date(v.visitDate) <= today);
   const toggleSort = (key: keyof HomeVisitation) =>
     setSortConfig((prev) => ({
       key,
@@ -182,7 +188,7 @@ export default function HomeVisits() {
         >
           <h3>Home Visits</h3>
           <small className="refresh-chip">
-            Showing {sortedVisits.length} of {totalCount} records
+            Showing {homeVisitRows.length} of {totalCount} records
           </small>
         </div>
         <table className="admin-table">
@@ -245,15 +251,14 @@ export default function HomeVisits() {
                 </td>
               </tr>
             )}
-            {visits.length === 0 && !error && (
+            {homeVisitRows.length === 0 && !error && (
               <tr>
                 <td colSpan={7} className="placeholder-row">
-                  No visits recorded yet. Click "Log Visit" to create a new
-                  record.
+                  No completed or current home visits in this filtered set.
                 </td>
               </tr>
             )}
-            {sortedVisits.map((v) => (
+            {homeVisitRows.map((v) => (
               <tr key={v.visitationId}>
                 <td>{new Date(v.visitDate).toLocaleDateString()}</td>
                 <td>{v.residentId}</td>
@@ -344,6 +349,63 @@ export default function HomeVisits() {
             Next
           </button>
         </div>
+      </div>
+
+      <div className="admin-card">
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <h3>Upcoming Case Conferences</h3>
+          <small className="refresh-chip">
+            {upcomingConferences.length} upcoming
+          </small>
+        </div>
+        <table className="admin-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Resident ID</th>
+              <th>Visit Type</th>
+              <th>Social Worker</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {upcomingConferences.length === 0 && !error && (
+              <tr>
+                <td colSpan={5} className="placeholder-row">
+                  No upcoming conferences in this filtered set.
+                </td>
+              </tr>
+            )}
+            {upcomingConferences.map((v) => (
+              <tr key={v.visitationId}>
+                <td>{new Date(v.visitDate).toLocaleDateString()}</td>
+                <td>{v.residentId}</td>
+                <td>{v.visitType}</td>
+                <td>{v.socialWorker}</td>
+                <td style={{ display: "flex", gap: "0.5rem" }}>
+                  <button
+                    className="btn btn-sm btn-secondary"
+                    onClick={() => openModal(v)}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    className="btn btn-sm btn-danger"
+                    onClick={() => deleteVisit(v.visitationId!)}
+                  >
+                    Delete
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
       {/* Home Visit Modal */}
