@@ -124,6 +124,10 @@ using (var scope = app.Services.CreateScope())
         }
 
         await EnsureBlogPostsTableAsync(db);
+        await EnsureResidentReachOutColumnsAsync(db);
+        await SeedResidentReachOutFromPredictionsAsync(db, logger);
+        await EnsureSupporterLapseColumnsAsync(db);
+        await SeedSupporterLapseFieldsFromPredictionsAsync(db, logger);
         await BlogSeedData.SeedAsync(db);
         logger.LogInformation("Seeded blog posts.");
     }
@@ -148,6 +152,108 @@ static async Task EnsureBlogPostsTableAsync(IntexDbContext db)
         """;
 
     await db.Database.ExecuteSqlRawAsync(createBlogPostsTableSql);
+}
+
+static async Task EnsureResidentReachOutColumnsAsync(IntexDbContext db)
+{
+    const string ensureColumnsSql = """
+        ALTER TABLE residents
+        ADD COLUMN IF NOT EXISTS low_progress_reached_out boolean NOT NULL DEFAULT FALSE,
+        ADD COLUMN IF NOT EXISTS incident_risk_reached_out boolean NOT NULL DEFAULT FALSE;
+        """;
+
+    await db.Database.ExecuteSqlRawAsync(ensureColumnsSql);
+}
+
+static async Task SeedResidentReachOutFromPredictionsAsync(IntexDbContext db, ILogger logger)
+{
+    // Only seed automatically when the new fields have not been used yet.
+    var existingMarkedCount = await db.Residents.CountAsync(r => r.LowProgressReachedOut || r.IncidentRiskReachedOut);
+    if (existingMarkedCount > 0)
+    {
+        return;
+    }
+
+    const string seedSql = """
+        WITH latest_progress AS (
+            SELECT DISTINCT ON (resident_id)
+                resident_id,
+                low_progress_risk_probability
+            FROM resident_progress_predictions
+            ORDER BY resident_id, scored_at DESC, prediction_id DESC
+        ),
+        latest_incident AS (
+            SELECT DISTINCT ON (resident_id)
+                resident_id,
+                incident_risk_probability
+            FROM incident_risk_predictions
+            ORDER BY resident_id, scored_at DESC, prediction_id DESC
+        )
+        UPDATE residents r
+        SET
+            low_progress_reached_out = COALESCE(lp.low_progress_risk_probability >= 0.66, FALSE),
+            incident_risk_reached_out = COALESCE(li.incident_risk_probability >= 0.66, FALSE)
+        FROM latest_progress lp
+        FULL OUTER JOIN latest_incident li ON li.resident_id = lp.resident_id
+        WHERE r.resident_id = COALESCE(lp.resident_id, li.resident_id);
+        """;
+
+    try
+    {
+        var affectedRows = await db.Database.ExecuteSqlRawAsync(seedSql);
+        logger.LogInformation("Seeded resident reach-out fields from predictions for {Count} residents.", affectedRows);
+    }
+    catch (Exception ex)
+    {
+        logger.LogWarning(ex, "Failed to seed resident reach-out fields from predictions; continuing startup.");
+    }
+}
+
+static async Task EnsureSupporterLapseColumnsAsync(IntexDbContext db)
+{
+    const string ensureColumnsSql = """
+        ALTER TABLE supporters
+        ADD COLUMN IF NOT EXISTS lapse_risk_probability double precision,
+        ADD COLUMN IF NOT EXISTS lapse_reached_out boolean NOT NULL DEFAULT FALSE;
+        """;
+
+    await db.Database.ExecuteSqlRawAsync(ensureColumnsSql);
+}
+
+static async Task SeedSupporterLapseFieldsFromPredictionsAsync(IntexDbContext db, ILogger logger)
+{
+    // Only seed automatically before users have started working with these columns.
+    var alreadySeededOrUsed = await db.Supporters.CountAsync(s => s.LapseRiskProbability.HasValue || s.LapseReachedOut);
+    if (alreadySeededOrUsed > 0)
+    {
+        return;
+    }
+
+    const string seedSql = """
+        WITH latest_donor_retention AS (
+            SELECT DISTINCT ON (supporter_id)
+                supporter_id,
+                lapse_risk_probability
+            FROM donor_retention_predictions
+            ORDER BY supporter_id, scored_at DESC, prediction_id DESC
+        )
+        UPDATE supporters s
+        SET
+            lapse_risk_probability = ldr.lapse_risk_probability,
+            lapse_reached_out = COALESCE(ldr.lapse_risk_probability >= 0.5, FALSE)
+        FROM latest_donor_retention ldr
+        WHERE s.supporter_id = ldr.supporter_id;
+        """;
+
+    try
+    {
+        var affectedRows = await db.Database.ExecuteSqlRawAsync(seedSql);
+        logger.LogInformation("Seeded supporter lapse fields from predictions for {Count} supporters.", affectedRows);
+    }
+    catch (Exception ex)
+    {
+        logger.LogWarning(ex, "Failed to seed supporter lapse fields from predictions; continuing startup.");
+    }
 }
 
 if (app.Environment.IsDevelopment())

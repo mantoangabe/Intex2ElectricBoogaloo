@@ -86,6 +86,21 @@ namespace backend.Controllers
             return CreatedAtAction("GetSupporter", new { id = supporter.SupporterId }, supporter);
         }
 
+        // PATCH: api/Supporters/5/lapse-reach-out
+        [HttpPatch("{id}/lapse-reach-out")]
+        public async Task<IActionResult> PatchSupporterLapseReachOut(int id, [FromBody] SupporterLapseReachOutUpdateDto update)
+        {
+            var supporter = await _context.Supporters.FindAsync(id);
+            if (supporter == null)
+            {
+                return NotFound();
+            }
+
+            supporter.LapseReachedOut = update.LapseReachedOut;
+            await _context.SaveChangesAsync();
+            return NoContent();
+        }
+
         // DELETE: api/Supporters/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteSupporter(int id)
@@ -105,6 +120,11 @@ namespace backend.Controllers
         private bool SupporterExists(int id)
         {
             return _context.Supporters.Any(e => e.SupporterId == id);
+        }
+
+        public class SupporterLapseReachOutUpdateDto
+        {
+            public bool LapseReachedOut { get; set; }
         }
     }
 }

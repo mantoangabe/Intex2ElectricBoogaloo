@@ -49,6 +49,12 @@ public class Supporter
     [Column("acquisition_channel")]
     public string AcquisitionChannel { get; set; } = string.Empty;
 
+    [Column("lapse_risk_probability")]
+    public double? LapseRiskProbability { get; set; }
+
+    [Column("lapse_reached_out")]
+    public bool LapseReachedOut { get; set; }
+
     [Column("created_at")]
     public DateTime CreatedAt { get; set; }
 }

@@ -142,6 +142,12 @@ public class Resident
     [Column("current_risk_level")]
     public string CurrentRiskLevel { get; set; } = string.Empty;
 
+    [Column("low_progress_reached_out")]
+    public bool LowProgressReachedOut { get; set; }
+
+    [Column("incident_risk_reached_out")]
+    public bool IncidentRiskReachedOut { get; set; }
+
     [Column("date_enrolled")]
     public DateTime DateEnrolled { get; set; }
 

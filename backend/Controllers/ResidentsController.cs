@@ -110,6 +110,30 @@ namespace backend.Controllers
             return CreatedAtAction("GetResident", new { id = resident.ResidentId }, resident);
         }
 
+        // PATCH: api/Residents/5/reach-out
+        [HttpPatch("{id}/reach-out")]
+        public async Task<IActionResult> PatchResidentReachOut(int id, [FromBody] ResidentReachOutUpdateDto update)
+        {
+            var resident = await _context.Residents.FindAsync(id);
+            if (resident == null)
+            {
+                return NotFound();
+            }
+
+            if (update.LowProgressReachedOut.HasValue)
+            {
+                resident.LowProgressReachedOut = update.LowProgressReachedOut.Value;
+            }
+
+            if (update.IncidentRiskReachedOut.HasValue)
+            {
+                resident.IncidentRiskReachedOut = update.IncidentRiskReachedOut.Value;
+            }
+
+            await _context.SaveChangesAsync();
+            return NoContent();
+        }
+
         // DELETE: api/Residents/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteResident(int id)
@@ -178,6 +202,12 @@ namespace backend.Controllers
             }
 
             return query;
+        }
+
+        public class ResidentReachOutUpdateDto
+        {
+            public bool? LowProgressReachedOut { get; set; }
+            public bool? IncidentRiskReachedOut { get; set; }
         }
     }
 }

@@ -23,14 +23,12 @@ interface Resident {
   initialRiskLevel: string;
   currentRiskLevel: string;
   dateOfAdmission: string;
+  lowProgressReachedOut?: boolean;
+  incidentRiskReachedOut?: boolean;
 }
 
 export default function CaseloadInventory() {
   const DEFAULT_PAGE_SIZE = 25;
-  const LOW_PROGRESS_REACHED_OUT_STORAGE_KEY =
-    'caseloadLowProgressReachedOutByResident';
-  const INCIDENT_REACHED_OUT_STORAGE_KEY =
-    'caseloadIncidentReachedOutByResident';
   const [residents, setResidents] = useState<Resident[]>([]);
   const [progressPredictions, setProgressPredictions] = useState<Record<number, ResidentProgressPrediction>>({});
   const [incidentPredictions, setIncidentPredictions] = useState<Record<number, IncidentRiskPrediction>>({});
@@ -47,11 +45,6 @@ export default function CaseloadInventory() {
   const [sortConfig, setSortConfig] = useState<{ key: string; dir: 'asc' | 'desc' }>({ key: 'residentId', dir: 'asc' });
   const [progressStageFilter, setProgressStageFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all');
   const [incidentStageFilter, setIncidentStageFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all');
-  const [lowProgressReachedOutByResident, setLowProgressReachedOutByResident] =
-    useState<Record<number, boolean>>({});
-  const [incidentReachedOutByResident, setIncidentReachedOutByResident] =
-    useState<Record<number, boolean>>({});
-  const [reachOutHydrated, setReachOutHydrated] = useState(false);
   const filteredResidents = residents.filter(r => {
     const p = progressPredictions[r.residentId]?.lowProgressRiskProbability;
     const i = incidentPredictions[r.residentId]?.incidentRiskProbability;
@@ -72,13 +65,13 @@ export default function CaseloadInventory() {
       return (av - bv) * dir;
     }
     if (sortConfig.key === 'lowProgressReachOut') {
-      const av = lowProgressReachedOutByResident[a.residentId] ? 1 : 0;
-      const bv = lowProgressReachedOutByResident[b.residentId] ? 1 : 0;
+      const av = a.lowProgressReachedOut ? 1 : 0;
+      const bv = b.lowProgressReachedOut ? 1 : 0;
       return (av - bv) * dir;
     }
     if (sortConfig.key === 'incidentReachOut') {
-      const av = incidentReachedOutByResident[a.residentId] ? 1 : 0;
-      const bv = incidentReachedOutByResident[b.residentId] ? 1 : 0;
+      const av = a.incidentRiskReachedOut ? 1 : 0;
+      const bv = b.incidentRiskReachedOut ? 1 : 0;
       return (av - bv) * dir;
     }
     return String((a as any)[sortConfig.key] ?? '').localeCompare(String((b as any)[sortConfig.key] ?? '')) * dir;
@@ -193,69 +186,41 @@ export default function CaseloadInventory() {
     }
   }, []);
 
-  useEffect(() => {
-    try {
-      const lowProgressRaw = window.localStorage.getItem(
-        LOW_PROGRESS_REACHED_OUT_STORAGE_KEY,
-      );
-      const incidentRaw = window.localStorage.getItem(
-        INCIDENT_REACHED_OUT_STORAGE_KEY,
-      );
-      if (lowProgressRaw) {
-        setLowProgressReachedOutByResident(
-          JSON.parse(lowProgressRaw) as Record<number, boolean>,
-        );
-      }
-      if (incidentRaw) {
-        setIncidentReachedOutByResident(
-          JSON.parse(incidentRaw) as Record<number, boolean>,
-        );
-      }
-    } catch {
-      setLowProgressReachedOutByResident({});
-      setIncidentReachedOutByResident({});
-    } finally {
-      setReachOutHydrated(true);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!reachOutHydrated) {
-      return;
-    }
-    try {
-      window.localStorage.setItem(
-        LOW_PROGRESS_REACHED_OUT_STORAGE_KEY,
-        JSON.stringify(lowProgressReachedOutByResident),
-      );
-      window.localStorage.setItem(
-        INCIDENT_REACHED_OUT_STORAGE_KEY,
-        JSON.stringify(incidentReachedOutByResident),
-      );
-    } catch {
-      // Ignore storage errors in restricted browsing contexts.
-    }
-  }, [
-    reachOutHydrated,
-    lowProgressReachedOutByResident,
-    incidentReachedOutByResident,
-  ]);
-
   const lowProgressRiskIsHigh = (residentId: number) =>
     (progressPredictions[residentId]?.lowProgressRiskProbability ?? 0) >= 0.66;
   const incidentRiskIsHigh = (residentId: number) =>
     (incidentPredictions[residentId]?.incidentRiskProbability ?? 0) >= 0.66;
-  const toggleLowProgressReachedOut = (residentId: number, checked: boolean) => {
-    setLowProgressReachedOutByResident((prev) => ({
-      ...prev,
-      [residentId]: checked,
-    }));
-  };
-  const toggleIncidentReachedOut = (residentId: number, checked: boolean) => {
-    setIncidentReachedOutByResident((prev) => ({
-      ...prev,
-      [residentId]: checked,
-    }));
+
+  const updateResidentReachOut = async (
+    residentId: number,
+    updates: {
+      lowProgressReachedOut?: boolean;
+      incidentRiskReachedOut?: boolean;
+    },
+  ) => {
+    setResidents((prev) =>
+      prev.map((r) =>
+        r.residentId === residentId
+          ? {
+              ...r,
+              ...(updates.lowProgressReachedOut !== undefined
+                ? { lowProgressReachedOut: updates.lowProgressReachedOut }
+                : {}),
+              ...(updates.incidentRiskReachedOut !== undefined
+                ? { incidentRiskReachedOut: updates.incidentRiskReachedOut }
+                : {}),
+            }
+          : r,
+      ),
+    );
+
+    try {
+      await apiClient.patch(`/Residents/${residentId}/reach-out`, updates);
+    } catch {
+      // Re-sync from API if patch fails so checkbox state is accurate.
+      fetchResidents(page, pageSize);
+      alert('Failed to update reached-out status.');
+    }
   };
 
   useEffect(() => {
@@ -459,10 +424,12 @@ export default function CaseloadInventory() {
                     <input
                       type="checkbox"
                       aria-label={`Low progress reached out for resident ${r.residentId}`}
-                      checked={!!lowProgressReachedOutByResident[r.residentId]}
+                      checked={!!r.lowProgressReachedOut}
                       disabled={!lowProgressRiskIsHigh(r.residentId)}
                       onChange={(e) =>
-                        toggleLowProgressReachedOut(r.residentId, e.target.checked)
+                        updateResidentReachOut(r.residentId, {
+                          lowProgressReachedOut: e.target.checked,
+                        })
                       }
                     />
                   </td>
@@ -479,10 +446,12 @@ export default function CaseloadInventory() {
                     <input
                       type="checkbox"
                       aria-label={`Incident risk reached out for resident ${r.residentId}`}
-                      checked={!!incidentReachedOutByResident[r.residentId]}
+                      checked={!!r.incidentRiskReachedOut}
                       disabled={!incidentRiskIsHigh(r.residentId)}
                       onChange={(e) =>
-                        toggleIncidentReachedOut(r.residentId, e.target.checked)
+                        updateResidentReachOut(r.residentId, {
+                          incidentRiskReachedOut: e.target.checked,
+                        })
                       }
                     />
                   </td>

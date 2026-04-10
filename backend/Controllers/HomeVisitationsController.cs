@@ -39,6 +39,10 @@ namespace backend.Controllers
                 query = query.Where(h => h.VisitType == visitType);
             }
 
+            query = query
+                .OrderByDescending(h => h.VisitDate)
+                .ThenByDescending(h => h.VisitationId);
+
             return await query.Skip(skip).Take(take).ToListAsync();
         }
 

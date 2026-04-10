@@ -6,7 +6,6 @@ import PredictionBadge from "../../components/PredictionBadge";
 import LastRefreshChip from "../../components/LastRefreshChip";
 import { ENABLE_ML_PREDICTIONS } from "../../config/features";
 import { usePredictionMeta } from "../../hooks/usePredictionMeta";
-import type { DonorRetentionPrediction } from "../../types/predictions";
 
 interface Supporter {
   supporterId: number;
@@ -19,6 +18,8 @@ interface Supporter {
   email: string;
   phone: string;
   acquisitionChannel: string;
+  lapseRiskProbability?: number | null;
+  lapseReachedOut?: boolean;
 }
 
 interface Donation {
@@ -37,9 +38,6 @@ export default function Donors() {
     value === "all" ? Math.max(total, 1) : Number(value);
   const [supporters, setSupporters] = useState<Supporter[]>([]);
   const [donations, setDonations] = useState<Donation[]>([]);
-  const [predictions, setPredictions] = useState<
-    Record<number, DonorRetentionPrediction>
-  >({});
   const [reachOutFilter, setReachOutFilter] = useState<"all" | "yes" | "no">(
     "all",
   );
@@ -132,21 +130,7 @@ export default function Donors() {
       .then((r) => setDonationTotalCount(r.data.length))
       .catch(() => {});
     if (ENABLE_ML_PREDICTIONS) {
-      apiClient
-        .get<DonorRetentionPrediction[]>("/DonorRetentionPredictions", {
-          params: { skip: 0, take: 2000, latestOnly: true, sort: "score_desc" },
-        })
-        .then((res) => {
-          const map = res.data.reduce<Record<number, DonorRetentionPrediction>>(
-            (acc, row) => {
-              acc[row.supporterId] = row;
-              return acc;
-            },
-            {},
-          );
-          setPredictions(map);
-        })
-        .catch(() => setPredictions({}));
+      // Metadata chip still uses prediction endpoint; displayed values are DB-backed.
     }
   }, []);
 
@@ -286,15 +270,15 @@ export default function Donors() {
       }
 
       if (!ENABLE_ML_PREDICTIONS || reachOutFilter === "all") return true;
-      const p = predictions[s.supporterId]?.lapseRiskProbability;
-      if (p == null) return false;
-      return reachOutFilter === "yes" ? p >= 0.5 : p < 0.5;
+      return reachOutFilter === "yes"
+        ? !!s.lapseReachedOut
+        : !s.lapseReachedOut;
     })
     .sort((a, b) => {
       const dir = supporterSort.dir === "asc" ? 1 : -1;
       if (supporterSort.key === "lapseRiskProbability") {
-        const av = predictions[a.supporterId]?.lapseRiskProbability ?? -1;
-        const bv = predictions[b.supporterId]?.lapseRiskProbability ?? -1;
+        const av = a.lapseRiskProbability ?? -1;
+        const bv = b.lapseRiskProbability ?? -1;
         return (av - bv) * dir;
       }
       const av = String((a as any)[supporterSort.key] ?? "");
@@ -344,6 +328,26 @@ export default function Donors() {
         ) * dir
       );
     });
+
+  const updateSupporterLapseReachOut = async (
+    supporterId: number,
+    lapseReachedOut: boolean,
+  ) => {
+    setSupporters((prev) =>
+      prev.map((s) =>
+        s.supporterId === supporterId ? { ...s, lapseReachedOut } : s,
+      ),
+    );
+
+    try {
+      await apiClient.patch(`/Supporters/${supporterId}/lapse-reach-out`, {
+        lapseReachedOut,
+      });
+    } catch {
+      fetchSupporters(supporterPage, supporterPageSize);
+      alert("Failed to update lapse reach out status.");
+    }
+  };
 
   return (
     <AdminLayout title="Donors & Contributions">
@@ -540,11 +544,9 @@ export default function Donors() {
                   <td>{s.status}</td>
                   {ENABLE_ML_PREDICTIONS && (
                     <td className="table-center">
-                      {predictions[s.supporterId] ? (
+                      {s.lapseRiskProbability != null ? (
                         <PredictionBadge
-                          probability={
-                            predictions[s.supporterId].lapseRiskProbability
-                          }
+                          probability={s.lapseRiskProbability}
                         />
                       ) : (
                         "—"
@@ -553,20 +555,24 @@ export default function Donors() {
                   )}
                   {ENABLE_ML_PREDICTIONS && (
                     <td>
-                      {predictions[s.supporterId]
-                        ? `${(predictions[s.supporterId].lapseRiskProbability * 100).toFixed(1)}%`
+                      {s.lapseRiskProbability != null
+                        ? `${(s.lapseRiskProbability * 100).toFixed(1)}%`
                         : "—"}
                     </td>
                   )}
                   {ENABLE_ML_PREDICTIONS && (
                     <td>
-                      {predictions[s.supporterId] ? (
+                      {s.lapseRiskProbability != null ? (
                         <input
                           type="checkbox"
-                          checked={
-                            predictions[s.supporterId].lapseRiskProbability >= 0.5
+                          checked={!!s.lapseReachedOut}
+                          disabled={s.lapseRiskProbability < 0.5}
+                          onChange={(e) =>
+                            updateSupporterLapseReachOut(
+                              s.supporterId,
+                              e.target.checked,
+                            )
                           }
-                          readOnly
                           aria-label={`Reach out recommended for ${s.displayName}`}
                         />
                       ) : (

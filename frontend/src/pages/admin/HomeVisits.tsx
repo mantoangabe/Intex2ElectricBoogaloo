@@ -22,13 +22,18 @@ interface HomeVisitation {
 
 export default function HomeVisits() {
   const DEFAULT_PAGE_SIZE = 25;
+  const DEFAULT_UPCOMING_PAGE_SIZE = 10;
   const parsePageSize = (value: string, total: number) =>
     value === "all" ? Math.max(total, 1) : Number(value);
   const [visits, setVisits] = useState<HomeVisitation[]>([]);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
-  const [totalCount, setTotalCount] = useState(0);
   const [jumpPage, setJumpPage] = useState("1");
+  const [upcomingPage, setUpcomingPage] = useState(1);
+  const [upcomingPageSize, setUpcomingPageSize] = useState(
+    DEFAULT_UPCOMING_PAGE_SIZE,
+  );
+  const [upcomingJumpPage, setUpcomingJumpPage] = useState("1");
   const [selectedResidentId, setSelectedResidentId] = useState<string>("");
   const [visitTypeFilter, setVisitTypeFilter] = useState("all");
   const [sortConfig, setSortConfig] = useState<{
@@ -49,6 +54,22 @@ export default function HomeVisits() {
     (v) => new Date(v.visitDate) > today,
   );
   const homeVisitRows = sortedVisits.filter((v) => new Date(v.visitDate) <= today);
+  const homeVisitTotalPages = Math.max(
+    1,
+    Math.ceil(homeVisitRows.length / pageSize),
+  );
+  const pagedHomeVisitRows = homeVisitRows.slice(
+    (page - 1) * pageSize,
+    page * pageSize,
+  );
+  const upcomingTotalPages = Math.max(
+    1,
+    Math.ceil(upcomingConferences.length / upcomingPageSize),
+  );
+  const pagedUpcomingConferences = upcomingConferences.slice(
+    (upcomingPage - 1) * upcomingPageSize,
+    upcomingPage * upcomingPageSize,
+  );
   const toggleSort = (key: keyof HomeVisitation) =>
     setSortConfig((prev) => ({
       key,
@@ -56,16 +77,15 @@ export default function HomeVisits() {
     }));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [hasMore, setHasMore] = useState(false);
 
   const [showModal, setShowModal] = useState(false);
   const [editVisit, setEditVisit] = useState<HomeVisitation | null>(null);
   const [formData, setFormData] = useState<Partial<HomeVisitation>>({});
   const [saving, setSaving] = useState(false);
 
-  const fetchVisits = (pageVal: number, size: number) => {
+  const fetchVisits = () => {
     setLoading(true);
-    const params: any = { skip: (pageVal - 1) * size, take: size };
+    const params: any = { skip: 0, take: 100000 };
     if (selectedResidentId) {
       params.residentId = parseInt(selectedResidentId);
     }
@@ -75,7 +95,6 @@ export default function HomeVisits() {
     apiClient
       .get<HomeVisitation[]>("/HomeVisitations", { params })
       .then((res) => {
-        setHasMore(res.data.length === size);
         setVisits(res.data);
         setError(null);
       })
@@ -85,17 +104,9 @@ export default function HomeVisits() {
 
   useEffect(() => {
     setPage(1);
-    fetchVisits(1, pageSize);
+    setUpcomingPage(1);
+    fetchVisits();
   }, [selectedResidentId, visitTypeFilter]);
-
-  useEffect(() => {
-    apiClient
-      .get<HomeVisitation[]>("/HomeVisitations", {
-        params: { skip: 0, take: 100000 },
-      })
-      .then((r) => setTotalCount(r.data.length))
-      .catch(() => {});
-  }, []);
 
   const openModal = (visit: HomeVisitation | null) => {
     setEditVisit(visit);
@@ -120,7 +131,9 @@ export default function HomeVisits() {
       } else {
         await apiClient.post("/HomeVisitations", formData);
       }
-      fetchVisits(1, pageSize);
+      setPage(1);
+      setUpcomingPage(1);
+      fetchVisits();
       closeModal();
     } catch (err) {
       alert("Failed to save visit.");
@@ -133,14 +146,22 @@ export default function HomeVisits() {
     if (window.confirm("Delete this visit?")) {
       try {
         await apiClient.delete(`/HomeVisitations/${id}`);
-        fetchVisits(page, pageSize);
+        setUpcomingPage(1);
+        fetchVisits();
       } catch (err) {
         alert("Failed to delete visit.");
       }
     }
   };
   const pageSizeSelectValue =
-    totalCount > 0 && pageSize >= totalCount ? "all" : String(pageSize);
+    homeVisitRows.length > 0 && pageSize >= homeVisitRows.length
+      ? "all"
+      : String(pageSize);
+  const upcomingPageSizeSelectValue =
+    upcomingConferences.length > 0 &&
+    upcomingPageSize >= upcomingConferences.length
+      ? "all"
+      : String(upcomingPageSize);
 
   return (
     <AdminLayout title="Home Visitation & Case Conferences">
@@ -188,7 +209,7 @@ export default function HomeVisits() {
         >
           <h3>Home Visits</h3>
           <small className="refresh-chip">
-            Showing {homeVisitRows.length} of {totalCount} records
+            Showing {pagedHomeVisitRows.length} of {homeVisitRows.length} records
           </small>
         </div>
         <table className="admin-table">
@@ -251,14 +272,14 @@ export default function HomeVisits() {
                 </td>
               </tr>
             )}
-            {homeVisitRows.length === 0 && !error && (
+            {pagedHomeVisitRows.length === 0 && !error && (
               <tr>
                 <td colSpan={7} className="placeholder-row">
                   No completed or current home visits in this filtered set.
                 </td>
               </tr>
             )}
-            {homeVisitRows.map((v) => (
+            {pagedHomeVisitRows.map((v) => (
               <tr key={v.visitationId}>
                 <td>{new Date(v.visitDate).toLocaleDateString()}</td>
                 <td>{v.residentId}</td>
@@ -291,30 +312,28 @@ export default function HomeVisits() {
             onClick={() => {
               const p = page - 1;
               setPage(p);
-              fetchVisits(p, pageSize);
             }}
           >
             Previous
           </button>
           <span>
-            Page {page} of {Math.max(1, Math.ceil(totalCount / pageSize))}
+            Page {page} of {homeVisitTotalPages}
           </span>
           <input
             className="pagination-jump-input"
             type="number"
             aria-label="Jump to page"
             min={1}
-            max={Math.max(1, Math.ceil(totalCount / pageSize))}
+            max={homeVisitTotalPages}
             value={jumpPage}
             onChange={(e) => setJumpPage(e.target.value)}
           />
           <button
             className="btn btn-secondary btn-sm"
             onClick={() => {
-              const max = Math.max(1, Math.ceil(totalCount / pageSize));
+              const max = homeVisitTotalPages;
               const p = Math.min(max, Math.max(1, Number(jumpPage) || 1));
               setPage(p);
-              fetchVisits(p, pageSize);
             }}
           >
             Go
@@ -325,10 +344,9 @@ export default function HomeVisits() {
             aria-label="Items per page"
             value={pageSizeSelectValue}
             onChange={(e) => {
-              const size = parsePageSize(e.target.value, totalCount);
+              const size = parsePageSize(e.target.value, homeVisitRows.length);
               setPageSize(size);
               setPage(1);
-              fetchVisits(1, size);
             }}
           >
             <option value={10}>10 / page</option>
@@ -339,11 +357,10 @@ export default function HomeVisits() {
           </select>
           <button
             className="btn btn-secondary btn-sm"
-            disabled={!hasMore || loading}
+            disabled={page >= homeVisitTotalPages || loading}
             onClick={() => {
               const p = page + 1;
               setPage(p);
-              fetchVisits(p, pageSize);
             }}
           >
             Next
@@ -361,7 +378,7 @@ export default function HomeVisits() {
         >
           <h3>Upcoming Case Conferences</h3>
           <small className="refresh-chip">
-            {upcomingConferences.length} upcoming
+            Showing {pagedUpcomingConferences.length} of {upcomingConferences.length} upcoming
           </small>
         </div>
         <table className="admin-table">
@@ -375,14 +392,14 @@ export default function HomeVisits() {
             </tr>
           </thead>
           <tbody>
-            {upcomingConferences.length === 0 && !error && (
+            {pagedUpcomingConferences.length === 0 && !error && (
               <tr>
                 <td colSpan={5} className="placeholder-row">
                   No upcoming conferences in this filtered set.
                 </td>
               </tr>
             )}
-            {upcomingConferences.map((v) => (
+            {pagedUpcomingConferences.map((v) => (
               <tr key={v.visitationId}>
                 <td>{new Date(v.visitDate).toLocaleDateString()}</td>
                 <td>{v.residentId}</td>
@@ -406,6 +423,66 @@ export default function HomeVisits() {
             ))}
           </tbody>
         </table>
+        <div className="pagination-row">
+          <button
+            className="btn btn-secondary btn-sm"
+            disabled={upcomingPage === 1 || loading}
+            onClick={() => {
+              const p = upcomingPage - 1;
+              setUpcomingPage(p);
+            }}
+          >
+            Previous
+          </button>
+          <span>
+            Page {upcomingPage} of {upcomingTotalPages}
+          </span>
+          <input
+            className="pagination-jump-input"
+            type="number"
+            aria-label="Jump to upcoming page"
+            min={1}
+            max={upcomingTotalPages}
+            value={upcomingJumpPage}
+            onChange={(e) => setUpcomingJumpPage(e.target.value)}
+          />
+          <button
+            className="btn btn-secondary btn-sm"
+            onClick={() => {
+              const max = upcomingTotalPages;
+              const p = Math.min(max, Math.max(1, Number(upcomingJumpPage) || 1));
+              setUpcomingPage(p);
+            }}
+          >
+            Go
+          </button>
+          <select
+            className="filter-select"
+            style={{ marginLeft: "auto" }}
+            aria-label="Upcoming items per page"
+            value={upcomingPageSizeSelectValue}
+            onChange={(e) => {
+              const size = parsePageSize(e.target.value, upcomingConferences.length);
+              setUpcomingPageSize(size);
+              setUpcomingPage(1);
+            }}
+          >
+            <option value={10}>10 / page</option>
+            <option value={25}>25 / page</option>
+            <option value={50}>50 / page</option>
+            <option value="all">All records</option>
+          </select>
+          <button
+            className="btn btn-secondary btn-sm"
+            disabled={upcomingPage >= upcomingTotalPages || loading}
+            onClick={() => {
+              const p = upcomingPage + 1;
+              setUpcomingPage(p);
+            }}
+          >
+            Next
+          </button>
+        </div>
       </div>
 
       {/* Home Visit Modal */}
