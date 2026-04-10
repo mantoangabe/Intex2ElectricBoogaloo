@@ -16,8 +16,6 @@ interface DonorDonationHistoryItem {
 export default function DonorDashboard() {
   const { isAdmin } = useAuth();
   const [donationAmount, setDonationAmount] = useState("");
-  const [donationType, setDonationType] = useState("Monetary");
-  const [programArea, setProgramArea] = useState("General");
   const [note, setNote] = useState("");
   const [history, setHistory] = useState<DonorDonationHistoryItem[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
@@ -67,8 +65,6 @@ export default function DonorDashboard() {
       setSubmitError(null);
       await apiClient.post("/Donations/mine", {
         amount: parsedAmount,
-        donationType,
-        programArea,
         note,
       });
       await fetchDonationHistory();
@@ -80,8 +76,6 @@ export default function DonorDashboard() {
     }
 
     setDonationAmount("");
-    setDonationType("Monetary");
-    setProgramArea("General");
     setNote("");
   };
 
@@ -116,7 +110,7 @@ export default function DonorDashboard() {
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
+                gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
                 gap: "1rem",
               }}
             >
@@ -133,53 +127,23 @@ export default function DonorDashboard() {
               </div>
 
               <div className="form-group">
-                <label htmlFor="donor-donation-type">Donation Type</label>
-                <select
-                  id="donor-donation-type"
-                  value={donationType}
-                  onChange={(e) => setDonationType(e.target.value)}
-                >
-                  <option>Monetary</option>
-                  <option>In-Kind</option>
-                  <option>Skills</option>
-                  <option>Time</option>
-                </select>
+                <label htmlFor="donor-note">Note (Optional)</label>
+                <textarea
+                  id="donor-note"
+                  placeholder="Special instructions or comments..."
+                  rows={3}
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  style={{
+                    fontFamily: "var(--sans)",
+                    padding: "0.7rem 0.9rem",
+                    border: "1px solid var(--border)",
+                    borderRadius: "6px",
+                    width: "100%",
+                    boxSizing: "border-box",
+                  }}
+                />
               </div>
-
-              <div className="form-group">
-                <label htmlFor="donor-program-area">Program Area</label>
-                <select
-                  id="donor-program-area"
-                  value={programArea}
-                  onChange={(e) => setProgramArea(e.target.value)}
-                >
-                  <option>General</option>
-                  <option>Safehouse A</option>
-                  <option>Safehouse B</option>
-                  <option>Education Program</option>
-                  <option>Health Services</option>
-                  <option>Reintegration</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="donor-note">Note (Optional)</label>
-              <textarea
-                id="donor-note"
-                placeholder="Special instructions or comments..."
-                rows={3}
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                style={{
-                  fontFamily: "var(--sans)",
-                  padding: "0.7rem 0.9rem",
-                  border: "1px solid var(--border)",
-                  borderRadius: "6px",
-                  width: "100%",
-                  boxSizing: "border-box",
-                }}
-              />
             </div>
 
             <button type="submit" className="btn btn-primary">
@@ -206,29 +170,27 @@ export default function DonorDashboard() {
               <tr>
                 <th>Date</th>
                 <th>Amount</th>
-                <th>Type</th>
-                <th>Program Area</th>
                 <th>Note</th>
               </tr>
             </thead>
             <tbody>
               {isLoadingHistory && (
                 <tr>
-                  <td colSpan={5} className="placeholder-row">
+                  <td colSpan={3} className="placeholder-row">
                     Loading donation history...
                   </td>
                 </tr>
               )}
               {!isLoadingHistory && historyError && (
                 <tr>
-                  <td colSpan={5} className="placeholder-row">
+                  <td colSpan={3} className="placeholder-row">
                     {historyError}
                   </td>
                 </tr>
               )}
               {!isLoadingHistory && isAdmin && (
                 <tr>
-                  <td colSpan={5} className="placeholder-row">
+                  <td colSpan={3} className="placeholder-row">
                     Admin account: donor-specific history is only available for donor users.
                   </td>
                 </tr>
@@ -238,7 +200,7 @@ export default function DonorDashboard() {
                 !isAdmin &&
                 history.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="placeholder-row">
+                    <td colSpan={3} className="placeholder-row">
                       No donations found for your account yet.
                     </td>
                   </tr>
@@ -257,8 +219,6 @@ export default function DonorDashboard() {
                             currency: "USD",
                           })}
                     </td>
-                    <td>{donation.type || "-"}</td>
-                    <td>{donation.programArea || "-"}</td>
                     <td>{donation.note || "-"}</td>
                   </tr>
                 ))}
