@@ -3,6 +3,7 @@ import Navbar from '../../components/Navbar';
 import '../../styles/styles.css';
 import '../../styles/DonorImpact.css';
 import apiClient from '../../api/apiClient';
+import handsCircleImage from '../../assets/Hands_Circle.jpg';
 
 interface PublicOkrs {
   totalThisYear: number;
@@ -116,6 +117,11 @@ export default function DonorImpact() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <Navbar />
+
+      <section
+        className="donor-hero-section"
+        style={{ '--hero-bg': `url(${handsCircleImage})` } as React.CSSProperties}
+      />
 
       <main style={{ flex: 1 }}>
         <div className="donor-impact-container">
