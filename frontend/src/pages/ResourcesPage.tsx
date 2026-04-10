@@ -1,6 +1,7 @@
 import Navbar from '../components/Navbar';
 import '../styles/styles.css';
 import '../styles/ResourcesPage.css';
+import teamImg from '../assets/team.jpg';
 
 const resourceGroups = [
   {
@@ -33,6 +34,10 @@ export default function ResourcesPage() {
   return (
     <div className="resources-page-shell">
       <Navbar />
+      <section
+        className="resources-hero-banner"
+        style={{ '--hero-bg': `url(${teamImg})` } as React.CSSProperties}
+      />
       <main className="resources-page-main">
         <section className="resources-hero">
           <p className="resources-kicker">Public Resources</p>
