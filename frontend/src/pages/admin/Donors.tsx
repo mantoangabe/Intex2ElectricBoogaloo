@@ -51,7 +51,6 @@ export default function Donors() {
   }>({ key: "donationDate", dir: "desc" });
   const [supporterPage, setSupporterPage] = useState(1);
   const [supporterPageSize, setSupporterPageSize] = useState(DEFAULT_PAGE_SIZE);
-  const [supporterTotalCount, setSupporterTotalCount] = useState(0);
   const [supporterJumpPage, setSupporterJumpPage] = useState("1");
   const [donationPage, setDonationPage] = useState(1);
   const [donationPageSize, setDonationPageSize] = useState(DEFAULT_PAGE_SIZE);
@@ -59,7 +58,6 @@ export default function Donors() {
   const [donationJumpPage, setDonationJumpPage] = useState("1");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [supporterHasMore, setSupporterHasMore] = useState(false);
   const [donationHasMore, setDonationHasMore] = useState(false);
   const [activeSection, setActiveSection] = useState<"donors" | "donations">(
     "donors",
@@ -88,14 +86,13 @@ export default function Donors() {
   const [donorStatusFilter, setDonorStatusFilter] = useState("all");
   const [donorSearchTerm, setDonorSearchTerm] = useState("");
 
-  const fetchSupporters = (page: number, pageSize: number) => {
+  const fetchSupporters = () => {
     setLoading(true);
     apiClient
       .get<Supporter[]>("/Supporters", {
-        params: { skip: (page - 1) * pageSize, take: pageSize },
+        params: { skip: 0, take: 100000 },
       })
       .then((res) => {
-        setSupporterHasMore(res.data.length === pageSize);
         setSupporters(res.data);
         setError(null);
       })
@@ -119,12 +116,8 @@ export default function Donors() {
   };
 
   useEffect(() => {
-    fetchSupporters(1, supporterPageSize);
+    fetchSupporters();
     fetchDonations(1, donationPageSize);
-    apiClient
-      .get<Supporter[]>("/Supporters", { params: { skip: 0, take: 100000 } })
-      .then((r) => setSupporterTotalCount(r.data.length))
-      .catch(() => {});
     apiClient
       .get<Donation[]>("/Donations", { params: { skip: 0, take: 100000 } })
       .then((r) => setDonationTotalCount(r.data.length))
@@ -160,7 +153,8 @@ export default function Donors() {
       } else {
         await apiClient.post("/Supporters", supporterFormData);
       }
-      fetchSupporters(1, supporterPageSize);
+      setSupporterPage(1);
+      fetchSupporters();
       closeSupporterModal();
     } catch (err) {
       alert("Failed to save supporter.");
@@ -173,7 +167,8 @@ export default function Donors() {
     if (window.confirm("Delete this supporter?")) {
       try {
         await apiClient.delete(`/Supporters/${id}`);
-        fetchSupporters(supporterPage, supporterPageSize);
+        setSupporterPage(1);
+        fetchSupporters();
       } catch (err) {
         alert("Failed to delete supporter.");
       }
@@ -231,17 +226,17 @@ export default function Donors() {
     },
     {},
   );
-  const supporterTotalPages = Math.max(
-    1,
-    Math.ceil(supporterTotalCount / supporterPageSize),
-  );
+  const normalizedDonorStatusFilter = donorStatusFilter.trim().toLowerCase();
   const donationTotalPages = Math.max(
     1,
     Math.ceil(donationTotalCount / donationPageSize),
   );
   const donorRows = supporters
     .filter((s) => {
-      if (donorStatusFilter !== "all" && s.status !== donorStatusFilter) {
+      if (
+        normalizedDonorStatusFilter !== "all" &&
+        s.status.trim().toLowerCase() !== normalizedDonorStatusFilter
+      ) {
         return false;
       }
 
@@ -285,8 +280,16 @@ export default function Donors() {
       const bv = String((b as any)[supporterSort.key] ?? "");
       return av.localeCompare(bv) * dir;
     });
+  const supporterTotalPages = Math.max(
+    1,
+    Math.ceil(donorRows.length / supporterPageSize),
+  );
+  const pagedDonorRows = donorRows.slice(
+    (supporterPage - 1) * supporterPageSize,
+    supporterPage * supporterPageSize,
+  );
   const supporterPageSizeSelectValue =
-    supporterTotalCount > 0 && supporterPageSize >= supporterTotalCount
+    donorRows.length > 0 && supporterPageSize >= donorRows.length
       ? "all"
       : String(supporterPageSize);
   const donationPageSizeSelectValue =
@@ -329,6 +332,10 @@ export default function Donors() {
       );
     });
 
+  useEffect(() => {
+    setSupporterPage(1);
+  }, [donorSearchTerm, donorStatusFilter, donationTypeFilter, reachOutFilter]);
+
   const updateSupporterLapseReachOut = async (
     supporterId: number,
     lapseReachedOut: boolean,
@@ -344,7 +351,7 @@ export default function Donors() {
         lapseReachedOut,
       });
     } catch {
-      fetchSupporters(supporterPage, supporterPageSize);
+      fetchSupporters();
       alert("Failed to update lapse reach out status.");
     }
   };
@@ -434,7 +441,7 @@ export default function Donors() {
           >
             <h3>Donor List</h3>
             <small className="refresh-chip">
-              Showing {donorRows.length} of {supporterTotalCount} records
+              Showing {pagedDonorRows.length} of {donorRows.length} records
             </small>
           </div>
           <table className="admin-table">
@@ -527,7 +534,7 @@ export default function Donors() {
                   </td>
                 </tr>
               )}
-              {donorRows.length === 0 && !error && (
+              {pagedDonorRows.length === 0 && !error && (
                 <tr>
                   <td
                     colSpan={ENABLE_ML_PREDICTIONS ? 8 : 5}
@@ -537,7 +544,7 @@ export default function Donors() {
                   </td>
                 </tr>
               )}
-              {donorRows.map((s) => (
+              {pagedDonorRows.map((s) => (
                 <tr key={s.supporterId}>
                   <td>{s.displayName}</td>
                   <td>{s.supporterType}</td>
@@ -610,7 +617,6 @@ export default function Donors() {
               onClick={() => {
                 const p = supporterPage - 1;
                 setSupporterPage(p);
-                fetchSupporters(p, supporterPageSize);
               }}
             >
               Previous
@@ -635,7 +641,6 @@ export default function Donors() {
                   Math.max(1, Number(supporterJumpPage) || 1),
                 );
                 setSupporterPage(p);
-                fetchSupporters(p, supporterPageSize);
               }}
             >
               Go
@@ -646,10 +651,9 @@ export default function Donors() {
               aria-label="Items per page"
               value={supporterPageSizeSelectValue}
               onChange={(e) => {
-                const size = parsePageSize(e.target.value, supporterTotalCount);
+                const size = parsePageSize(e.target.value, donorRows.length);
                 setSupporterPageSize(size);
                 setSupporterPage(1);
-                fetchSupporters(1, size);
               }}
             >
               <option value={10}>10 / page</option>
@@ -660,11 +664,10 @@ export default function Donors() {
             </select>
             <button
               className="btn btn-secondary btn-sm"
-              disabled={!supporterHasMore || loading}
+              disabled={supporterPage >= supporterTotalPages || loading}
               onClick={() => {
                 const p = supporterPage + 1;
                 setSupporterPage(p);
-                fetchSupporters(p, supporterPageSize);
               }}
             >
               Next
