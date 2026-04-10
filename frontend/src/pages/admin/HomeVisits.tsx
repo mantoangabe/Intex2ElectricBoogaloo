@@ -34,6 +34,7 @@ export default function HomeVisits() {
     DEFAULT_UPCOMING_PAGE_SIZE,
   );
   const [upcomingJumpPage, setUpcomingJumpPage] = useState("1");
+  const [upcomingResidentSearch, setUpcomingResidentSearch] = useState("");
   const [selectedResidentId, setSelectedResidentId] = useState<string>("");
   const [visitTypeFilter, setVisitTypeFilter] = useState("all");
   const [sortConfig, setSortConfig] = useState<{
@@ -53,6 +54,13 @@ export default function HomeVisits() {
   const upcomingConferences = sortedVisits.filter(
     (v) => new Date(v.visitDate) > today,
   );
+  const filteredUpcomingConferences = upcomingConferences.filter((v) => {
+    const term = upcomingResidentSearch.trim();
+    if (!term) {
+      return true;
+    }
+    return String(v.residentId).includes(term);
+  });
   const homeVisitRows = sortedVisits.filter((v) => new Date(v.visitDate) <= today);
   const homeVisitTotalPages = Math.max(
     1,
@@ -64,9 +72,9 @@ export default function HomeVisits() {
   );
   const upcomingTotalPages = Math.max(
     1,
-    Math.ceil(upcomingConferences.length / upcomingPageSize),
+    Math.ceil(filteredUpcomingConferences.length / upcomingPageSize),
   );
-  const pagedUpcomingConferences = upcomingConferences.slice(
+  const pagedUpcomingConferences = filteredUpcomingConferences.slice(
     (upcomingPage - 1) * upcomingPageSize,
     upcomingPage * upcomingPageSize,
   );
@@ -107,6 +115,11 @@ export default function HomeVisits() {
     setUpcomingPage(1);
     fetchVisits();
   }, [selectedResidentId, visitTypeFilter]);
+
+  useEffect(() => {
+    setUpcomingPage(1);
+    setUpcomingJumpPage("1");
+  }, [upcomingResidentSearch]);
 
   const openModal = (visit: HomeVisitation | null) => {
     setEditVisit(visit);
@@ -158,8 +171,8 @@ export default function HomeVisits() {
       ? "all"
       : String(pageSize);
   const upcomingPageSizeSelectValue =
-    upcomingConferences.length > 0 &&
-    upcomingPageSize >= upcomingConferences.length
+    filteredUpcomingConferences.length > 0 &&
+    upcomingPageSize >= filteredUpcomingConferences.length
       ? "all"
       : String(upcomingPageSize);
 
@@ -378,8 +391,18 @@ export default function HomeVisits() {
         >
           <h3>Upcoming Case Conferences</h3>
           <small className="refresh-chip">
-            Showing {pagedUpcomingConferences.length} of {upcomingConferences.length} upcoming
+            Showing {pagedUpcomingConferences.length} of {filteredUpcomingConferences.length} upcoming
           </small>
+        </div>
+        <div className="filter-bar" style={{ marginBottom: "0.75rem" }}>
+          <input
+            type="text"
+            placeholder="Search upcoming by Resident ID"
+            className="filter-input"
+            aria-label="Search upcoming conferences by resident ID"
+            value={upcomingResidentSearch}
+            onChange={(e) => setUpcomingResidentSearch(e.target.value)}
+          />
         </div>
         <table className="admin-table">
           <thead>
@@ -462,7 +485,10 @@ export default function HomeVisits() {
             aria-label="Upcoming items per page"
             value={upcomingPageSizeSelectValue}
             onChange={(e) => {
-              const size = parsePageSize(e.target.value, upcomingConferences.length);
+              const size = parsePageSize(
+                e.target.value,
+                filteredUpcomingConferences.length,
+              );
               setUpcomingPageSize(size);
               setUpcomingPage(1);
             }}
