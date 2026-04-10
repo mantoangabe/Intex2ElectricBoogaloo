@@ -147,9 +147,6 @@ export default function ProcessRecording() {
       </div>
 
       <div className="filter-bar">
-        <select className="filter-select" aria-label="Select resident">
-          <option>Select Resident...</option>
-        </select>
         <select
           className="filter-select"
           aria-label="Filter by follow-up type"
@@ -167,18 +164,6 @@ export default function ProcessRecording() {
             </option>
           ))}
         </select>
-        <input
-          type="date"
-          className="filter-input"
-          aria-label="From date"
-          placeholder="From date"
-        />
-        <input
-          type="date"
-          className="filter-input"
-          aria-label="To date"
-          placeholder="To date"
-        />
       </div>
 
       <div className="admin-card">

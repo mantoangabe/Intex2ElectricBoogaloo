@@ -29,6 +29,8 @@ export default function HomeVisits() {
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [totalCount, setTotalCount] = useState(0);
   const [jumpPage, setJumpPage] = useState("1");
+  const [selectedResidentId, setSelectedResidentId] = useState<string>("");
+  const [visitTypeFilter, setVisitTypeFilter] = useState("all");
   const [sortConfig, setSortConfig] = useState<{
     key: keyof HomeVisitation;
     dir: "asc" | "desc";
@@ -57,10 +59,15 @@ export default function HomeVisits() {
 
   const fetchVisits = (pageVal: number, size: number) => {
     setLoading(true);
+    const params: any = { skip: (pageVal - 1) * size, take: size };
+    if (selectedResidentId) {
+      params.residentId = parseInt(selectedResidentId);
+    }
+    if (visitTypeFilter && visitTypeFilter !== "all") {
+      params.visitType = visitTypeFilter;
+    }
     apiClient
-      .get<HomeVisitation[]>("/HomeVisitations", {
-        params: { skip: (pageVal - 1) * size, take: size },
-      })
+      .get<HomeVisitation[]>("/HomeVisitations", { params })
       .then((res) => {
         setHasMore(res.data.length === size);
         setVisits(res.data);
@@ -71,7 +78,11 @@ export default function HomeVisits() {
   };
 
   useEffect(() => {
+    setPage(1);
     fetchVisits(1, pageSize);
+  }, [selectedResidentId, visitTypeFilter]);
+
+  useEffect(() => {
     apiClient
       .get<HomeVisitation[]>("/HomeVisitations", {
         params: { skip: 0, take: 100000 },
@@ -140,30 +151,25 @@ export default function HomeVisits() {
       <div className="filter-bar">
         <input
           type="text"
-          placeholder="Search resident..."
+          placeholder="Resident ID"
           className="filter-input"
-          aria-label="Search resident"
+          aria-label="Filter by resident ID"
+          value={selectedResidentId}
+          onChange={(e) => setSelectedResidentId(e.target.value)}
         />
-        <select className="filter-select" aria-label="Filter by visit type">
-          <option>All Visit Types</option>
-          <option>Initial Assessment</option>
-          <option>Routine Follow-up</option>
-          <option>Reintegration Assessment</option>
-          <option>Post-placement Monitoring</option>
-          <option>Emergency</option>
+        <select
+          className="filter-select"
+          aria-label="Filter by visit type"
+          value={visitTypeFilter}
+          onChange={(e) => setVisitTypeFilter(e.target.value)}
+        >
+          <option value="all">All Visit Types</option>
+          <option value="Initial Assessment">Initial Assessment</option>
+          <option value="Routine Follow-up">Routine Follow-up</option>
+          <option value="Reintegration Assessment">Reintegration Assessment</option>
+          <option value="Post-placement Monitoring">Post-placement Monitoring</option>
+          <option value="Emergency">Emergency</option>
         </select>
-        <input
-          type="date"
-          className="filter-input"
-          aria-label="From date"
-          placeholder="From date"
-        />
-        <input
-          type="date"
-          className="filter-input"
-          aria-label="To date"
-          placeholder="To date"
-        />
       </div>
 
       <div className="admin-card">
@@ -338,36 +344,6 @@ export default function HomeVisits() {
             Next
           </button>
         </div>
-      </div>
-
-      <div className="admin-card">
-        <h3>Case Conferences</h3>
-        <p
-          style={{
-            color: "var(--text-muted)",
-            fontSize: "0.9rem",
-            marginBottom: "1rem",
-          }}
-        >
-          Upcoming and past case conferences for residents.
-        </p>
-        <table className="admin-table">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Resident</th>
-              <th>Status</th>
-              <th>Attendees</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td colSpan={4} className="placeholder-row">
-                No conferences scheduled.
-              </td>
-            </tr>
-          </tbody>
-        </table>
       </div>
 
       {/* Home Visit Modal */}

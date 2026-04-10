@@ -148,7 +148,7 @@ export default function DonorImpact() {
               </div>
 
               {/* Left: heading + description */}
-              <div style={{ paddingTop: '0.4rem' }}>
+              <div className="donor-impact-content" style={{ paddingTop: '0.4rem' }}>
                 <h2 style={{ color: 'var(--text)', marginBottom: '1rem' }}>
                   {section.heading}
                 </h2>

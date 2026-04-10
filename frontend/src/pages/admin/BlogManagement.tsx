@@ -187,7 +187,7 @@ export default function BlogManagement() {
             {!loading && posts.map((post) => (
               <tr key={post.blogPostId}>
                 <td>{post.title}</td>
-                <td>{post.date}</td>
+                <td>{post.data}</td>
                 <td>{post.categories}</td>
                 <td>{post.comments}</td>
                 <td>

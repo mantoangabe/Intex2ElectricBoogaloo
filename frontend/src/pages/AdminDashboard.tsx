@@ -171,21 +171,6 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      <div className="admin-card">
-        <h3>Quick Actions</h3>
-        <div className="quick-actions">
-          {[
-            'New Resident Admission',
-            'Record Donation',
-            'Schedule Visit',
-            'Add Process Note'
-          ].map((action) => (
-            <button key={action} className="btn btn-primary btn-sm" style={{ marginRight: '0.5rem' }}>
-              {action}
-            </button>
-          ))}
-        </div>
-      </div>
     </AdminLayout>
   );
 }

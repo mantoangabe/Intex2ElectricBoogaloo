@@ -2,7 +2,6 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(180deg, #f6fbf8 0%, #ffffff 26%, #f6f4ef 100%);
 }
 
 .resources-page-main {
@@ -13,8 +12,8 @@
 }
 
 .resources-hero {
-  background: linear-gradient(135deg, rgba(54, 96, 65, 0.09), rgba(0, 0, 0, 0.02));
-  border: 1px solid rgba(54, 96, 65, 0.12);
+  background: var(--white);
+  border: 1px solid var(--border);
   border-radius: 24px;
   padding: 2rem;
   margin-bottom: 1.75rem;

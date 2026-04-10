@@ -36,7 +36,7 @@ export default function BlogPage() {
         <section className="blog-hero">
           <p className="blog-kicker">Public Blog</p>
           <h1>Blog</h1>
-          <p>Reflections, updates, and stories from Lighthouse Sanctuary.</p>
+          <p>Reflections, updates, and stories from River of Life.</p>
         </section>
 
         <div className="blog-layout">
@@ -76,7 +76,7 @@ export default function BlogPage() {
             <article className="blog-sidebar-card">
               <h2>Community Moments</h2>
               <p>
-                A small gallery from the stories, work, and hope surrounding Lighthouse Sanctuary.
+                A small gallery from the stories, work, and hope surrounding River of Life.
               </p>
               <div className="blog-photo-grid">
                 <img src="/Blog1.png" alt="Blog highlight one" />

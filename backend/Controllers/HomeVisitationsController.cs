@@ -25,9 +25,21 @@ namespace backend.Controllers
 
         // GET: api/HomeVisitations
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<HomeVisitation>>> GetHomeVisitations([FromQuery] int skip = 0, [FromQuery] int take = 25)
+        public async Task<ActionResult<IEnumerable<HomeVisitation>>> GetHomeVisitations([FromQuery] int skip = 0, [FromQuery] int take = 25, [FromQuery] int? residentId = null, [FromQuery] string visitType = null)
         {
-            return await _context.HomeVisitations.Skip(skip).Take(take).ToListAsync();
+            var query = _context.HomeVisitations.AsQueryable();
+
+            if (residentId.HasValue)
+            {
+                query = query.Where(h => h.ResidentId == residentId.Value);
+            }
+
+            if (!string.IsNullOrWhiteSpace(visitType))
+            {
+                query = query.Where(h => h.VisitType == visitType);
+            }
+
+            return await query.Skip(skip).Take(take).ToListAsync();
         }
 
         // GET: api/HomeVisitations/5
