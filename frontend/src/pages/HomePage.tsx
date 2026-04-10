@@ -41,10 +41,8 @@ export default function HomePage() {
         <h2>About Us</h2>
         <p>
           River of Life is a non-governmental organization dedicated to protecting and
-          empowering vulnerable women and children in Brazil. Operating under
-          the guidelines of the Department of Social Welfare and Development (DSWD),
-          we provide comprehensive care spanning shelter, psychosocial support,
-          education, livelihood training, and family reintegration services.
+          empowering vulnerable women and children in Brazil. Our goal is to provide them with safety, healing, justice, and empowerment through safehouses and uplifting programs. 
+          We provide for their physical, mental, social, and spiritual health.
         </p>
       </section>
 
