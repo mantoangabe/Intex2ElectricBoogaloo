@@ -5,6 +5,16 @@
   background: #F2EAE0;
 }
 
+.resources-hero-banner {
+  background-image: var(--hero-bg);
+  background-attachment: fixed;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  height: 400px;
+  width: 100%;
+}
+
 .resources-page-main {
   width: min(1120px, calc(100% - 2rem));
   margin: 0 auto;
