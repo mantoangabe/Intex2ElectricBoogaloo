@@ -2,6 +2,7 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  background: #F2EAE0;
 }
 
 .blog-page-main {

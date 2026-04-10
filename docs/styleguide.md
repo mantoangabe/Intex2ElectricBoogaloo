@@ -14,8 +14,8 @@ All colors are defined as CSS variables in `frontend/src/index.css` and should b
 
 | Color | Hex | CSS Variable | Usage |
 |-------|-----|--------------|-------|
-| Primary Teal | `#00B8A9` | `--primary` | Brand color, primary buttons, links, nav highlights, CTAs |
-| Primary Dark | `#009d90` | `--primary-dark` | Hover state for primary buttons |
+| Primary Teal | `#008579` | `--primary` | Brand color, primary buttons, links, nav highlights, CTAs |
+| Primary Dark | `#007368` | `--primary-dark` | Hover state for primary buttons |
 | Accent Pink | `#F6416C` | `--accent` | Danger/warning states, secondary highlights |
 | Highlight Yellow | `#FFDE7D` | `--highlight` | Accent cards, callouts, metric highlights |
 
@@ -95,7 +95,7 @@ All layouts are mobile-first and responsive:
 All buttons use the `.btn` base class with modifiers:
 
 #### `.btn-primary`
-- **Background**: `--primary` (#00B8A9)
+- **Background**: `--primary` (#008579)
 - **Text**: White
 - **Hover**: Darker primary color, slight lift (translateY), shadow
 - **Usage**: Main CTAs, primary actions
@@ -157,7 +157,7 @@ All form inputs follow this pattern:
 input:focus, select:focus, textarea:focus {
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(0, 184, 169, 0.1);
+  box-shadow: 0 0 0 3px rgba(0, 133, 121, 0.1);
 }
 ```
 
@@ -169,7 +169,7 @@ input:focus, select:focus, textarea:focus {
 ### Tables
 
 - **Header**: Uppercase, font-weight 700, 2px bottom border
-- **Rows**: Hover background `rgba(0, 184, 169, 0.03)` (very subtle teal)
+- **Rows**: Hover background `rgba(0, 133, 121, 0.03)` (very subtle teal)
 - **Borders**: 1px solid `--border` between rows
 
 ### Navbar (Public Pages)

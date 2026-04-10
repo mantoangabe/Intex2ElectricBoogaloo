@@ -6,9 +6,13 @@
 
 /* ─── Hero Section ────────────────────────────────────────────────────── */
 .hero-section {
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  background-image: linear-gradient(135deg, rgba(0, 0, 0, 0.25) 0%, rgba(0, 0, 0, 0.1) 100%), var(--hero-bg);
+  background-attachment: scroll, fixed;
+  background-size: auto, cover;
+  background-position: center center, center 0%;
+  background-repeat: no-repeat;
   color: var(--white);
-  padding: 5rem 2rem;
+  padding: 7.5rem 2rem;
   text-align: center;
   flex: 1;
   display: flex;
@@ -47,8 +51,8 @@
 }
 
 .btn-primary {
-  background: var(--white);
-  color: var(--primary);
+  background: var(--primary);
+  color: var(--white);
 }
 
 .btn-primary:hover {
@@ -57,14 +61,38 @@
 }
 
 .btn-outline {
-  background: transparent;
+  background: var(--primary);
   color: var(--white);
-  border: 2px solid var(--white);
+  border: 2px solid var(--primary);
 }
 
 .btn-outline:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--primary-dark);
   transform: translateY(-2px);
+}
+
+/* ─── Journaling Section ──────────────────────────────────────────────────── */
+.journaling-section {
+  background-image: var(--journaling-bg);
+  background-attachment: fixed;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  height: 400px;
+  width: 100%;
+}
+
+/* ─── Image Section ──────────────────────────────────────────────────── */
+.image-section {
+  width: 100%;
+  overflow: hidden;
+}
+
+.image-section img {
+  width: 100%;
+  height: 400px;
+  object-fit: cover;
+  display: block;
 }
 
 /* ─── Impact Section ─────────────────────────────────────────────────── */
@@ -126,6 +154,43 @@
   color: var(--text-muted);
 }
 
+/* ─── How Help Section ───────────────────────────────────────────────── */
+.how-help-section {
+  padding: 3rem 2rem;
+  max-width: 800px;
+  margin: 0 auto;
+  background: var(--bg);
+}
+
+.how-help-section h2 {
+  font-size: 1.75rem;
+  margin-bottom: 1rem;
+  color: var(--text);
+}
+
+.how-help-section p {
+  line-height: 1.8;
+  color: var(--text-muted);
+}
+
+/* ─── Location Section ───────────────────────────────────────────────── */
+.location-section {
+  padding: 3rem 2rem;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.location-section h2 {
+  font-size: 1.75rem;
+  margin-bottom: 1rem;
+  color: var(--text);
+}
+
+.location-section p {
+  line-height: 1.8;
+  color: var(--text-muted);
+}
+
 /* ─── Footer ─────────────────────────────────────────────────────────── */
 .footer {
   background: var(--text);
@@ -142,7 +207,7 @@
 /* ─── Responsive ─────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
   .hero-section {
-    padding: 3rem 1rem;
+    padding: 4.5rem 1rem;
   }
 
   .hero-section h1 {
@@ -168,7 +233,7 @@
 
 @media (max-width: 480px) {
   .hero-section {
-    padding: 2rem 1rem;
+    padding: 3rem 1rem;
   }
 
   .hero-section h1 {

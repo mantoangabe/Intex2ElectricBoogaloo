@@ -2,6 +2,17 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  background: #F2EAE0;
+}
+
+.resources-hero-banner {
+  background-image: var(--hero-bg);
+  background-attachment: fixed;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  height: 400px;
+  width: 100%;
 }
 
 .resources-page-main {
