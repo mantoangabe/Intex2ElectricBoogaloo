@@ -25,9 +25,20 @@ namespace backend.Controllers
 
         // GET: api/ProcessRecordings
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<ProcessRecording>>> GetProcessRecordings([FromQuery] int skip = 0, [FromQuery] int take = 25)
+        public async Task<ActionResult<IEnumerable<ProcessRecording>>> GetProcessRecordings([FromQuery] int skip = 0, [FromQuery] int take = 25, [FromQuery] int? residentId = null)
         {
-            return await _context.ProcessRecordings.Skip(skip).Take(take).ToListAsync();
+            var query = _context.ProcessRecordings.AsQueryable();
+
+            if (residentId.HasValue)
+            {
+                query = query.Where(r => r.ResidentId == residentId.Value);
+            }
+
+            query = query
+                .OrderBy(r => r.SessionDate)
+                .ThenBy(r => r.RecordingId);
+
+            return await query.Skip(skip).Take(take).ToListAsync();
         }
 
         // GET: api/ProcessRecordings/5

@@ -25,27 +25,47 @@ export default function ProcessRecording() {
   const parsePageSize = (value: string, total: number) =>
     value === "all" ? Math.max(total, 1) : Number(value);
   const [recordings, setRecordings] = useState<ProcessRecording[]>([]);
+  const [residentIdInput, setResidentIdInput] = useState("");
+  const [selectedResidentId, setSelectedResidentId] = useState<number | null>(
+    null,
+  );
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
-  const [totalCount, setTotalCount] = useState(0);
   const [jumpPage, setJumpPage] = useState("1");
   const [sortConfig, setSortConfig] = useState<{
     key: keyof ProcessRecording;
     dir: "asc" | "desc";
-  }>({ key: "sessionDate", dir: "desc" });
+  }>({ key: "sessionDate", dir: "asc" });
   const [followUpFilter, setFollowUpFilter] = useState("all");
-  const sortedRecordings = recordings
+  const filteredRecordings = recordings
     .filter(
       (r) => followUpFilter === "all" || r.followUpActions === followUpFilter,
-    )
+    );
+  const sortedRecordings = filteredRecordings
     .sort((a, b) => {
       const dir = sortConfig.dir === "asc" ? 1 : -1;
+      if (sortConfig.key === "sessionDate") {
+        return (
+          (new Date(a.sessionDate).getTime() -
+            new Date(b.sessionDate).getTime()) *
+          dir
+        );
+      }
       return (
         String(a[sortConfig.key] ?? "").localeCompare(
           String(b[sortConfig.key] ?? ""),
         ) * dir
       );
     });
+  const totalCount = sortedRecordings.length;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const pagedRecordings = sortedRecordings.slice(
+    (page - 1) * pageSize,
+    page * pageSize,
+  );
+  const followUpOptions = Array.from(
+    new Set(recordings.map((r) => r.followUpActions).filter(Boolean)),
+  ).sort((a, b) => a.localeCompare(b));
   const toggleSort = (key: keyof ProcessRecording) =>
     setSortConfig((prev) => ({
       key,
@@ -53,7 +73,6 @@ export default function ProcessRecording() {
     }));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [hasMore, setHasMore] = useState(false);
 
   const [showModal, setShowModal] = useState(false);
   const [editRecording, setEditRecording] = useState<ProcessRecording | null>(
@@ -62,14 +81,13 @@ export default function ProcessRecording() {
   const [formData, setFormData] = useState<Partial<ProcessRecording>>({});
   const [saving, setSaving] = useState(false);
 
-  const fetchRecordings = (pageVal: number, size: number) => {
+  const fetchRecordings = (residentId: number) => {
     setLoading(true);
     apiClient
       .get<ProcessRecording[]>("/ProcessRecordings", {
-        params: { skip: (pageVal - 1) * size, take: size },
+        params: { skip: 0, take: 100000, residentId },
       })
       .then((res) => {
-        setHasMore(res.data.length === size);
         setRecordings(res.data);
         setError(null);
       })
@@ -78,14 +96,13 @@ export default function ProcessRecording() {
   };
 
   useEffect(() => {
-    fetchRecordings(1, pageSize);
-    apiClient
-      .get<ProcessRecording[]>("/ProcessRecordings", {
-        params: { skip: 0, take: 100000 },
-      })
-      .then((r) => setTotalCount(r.data.length))
-      .catch(() => {});
-  }, []);
+    if (selectedResidentId == null) {
+      setRecordings([]);
+      setError(null);
+      return;
+    }
+    fetchRecordings(selectedResidentId);
+  }, [selectedResidentId]);
 
   const openModal = (recording: ProcessRecording | null) => {
     setEditRecording(recording);
@@ -110,7 +127,9 @@ export default function ProcessRecording() {
       } else {
         await apiClient.post("/ProcessRecordings", formData);
       }
-      fetchRecordings(1, pageSize);
+      if (selectedResidentId != null) {
+        fetchRecordings(selectedResidentId);
+      }
       closeModal();
     } catch (err) {
       alert("Failed to save recording.");
@@ -123,12 +142,18 @@ export default function ProcessRecording() {
     if (window.confirm("Delete this recording?")) {
       try {
         await apiClient.delete(`/ProcessRecordings/${id}`);
-        fetchRecordings(page, pageSize);
+        if (selectedResidentId != null) {
+          fetchRecordings(selectedResidentId);
+        }
       } catch (err) {
         alert("Failed to delete recording.");
       }
     }
   };
+  useEffect(() => {
+    setPage(1);
+  }, [selectedResidentId, followUpFilter]);
+
   const pageSizeSelectValue =
     totalCount > 0 && pageSize >= totalCount ? "all" : String(pageSize);
 
@@ -147,6 +172,30 @@ export default function ProcessRecording() {
       </div>
 
       <div className="filter-bar">
+        <input
+          type="number"
+          placeholder="Resident ID"
+          className="filter-input"
+          aria-label="Resident ID"
+          value={residentIdInput}
+          onChange={(e) => setResidentIdInput(e.target.value)}
+        />
+        <button
+          className="btn btn-secondary"
+          onClick={() => {
+            const parsed = Number(residentIdInput);
+            if (Number.isInteger(parsed) && parsed > 0) {
+              setSelectedResidentId(parsed);
+              setPage(1);
+              setJumpPage("1");
+              return;
+            }
+            setSelectedResidentId(null);
+            setRecordings([]);
+          }}
+        >
+          Load Resident Records
+        </button>
         <select
           className="filter-select"
           aria-label="Filter by follow-up type"
@@ -154,11 +203,7 @@ export default function ProcessRecording() {
           onChange={(e) => setFollowUpFilter(e.target.value)}
         >
           <option value="all">All Follow-up Types</option>
-          {[
-            ...new Set(
-              recordings.map((r) => r.followUpActions).filter(Boolean),
-            ),
-          ].map((v) => (
+          {followUpOptions.map((v) => (
             <option key={v} value={v}>
               {v}
             </option>
@@ -176,7 +221,7 @@ export default function ProcessRecording() {
         >
           <h3>Session Records</h3>
           <small className="refresh-chip">
-            Showing {sortedRecordings.length} of {totalCount} records
+            Showing {pagedRecordings.length} of {totalCount} records
           </small>
         </div>
         <table className="admin-table">
@@ -239,14 +284,21 @@ export default function ProcessRecording() {
                 </td>
               </tr>
             )}
-            {recordings.length === 0 && !error && (
+            {selectedResidentId == null && !error && (
+              <tr>
+                <td colSpan={7} className="placeholder-row">
+                  Enter a Resident ID and click Load Resident Records to view sessions.
+                </td>
+              </tr>
+            )}
+            {selectedResidentId != null && pagedRecordings.length === 0 && !error && (
               <tr>
                 <td colSpan={7} className="placeholder-row">
                   No session records found.
                 </td>
               </tr>
             )}
-            {sortedRecordings.map((r) => (
+            {pagedRecordings.map((r) => (
               <tr key={r.recordingId}>
                 <td>{new Date(r.sessionDate).toLocaleDateString()}</td>
                 <td>{r.residentId}</td>
@@ -279,30 +331,28 @@ export default function ProcessRecording() {
             onClick={() => {
               const p = page - 1;
               setPage(p);
-              fetchRecordings(p, pageSize);
             }}
           >
             Previous
           </button>
           <span>
-            Page {page} of {Math.max(1, Math.ceil(totalCount / pageSize))}
+            Page {page} of {totalPages}
           </span>
           <input
             className="pagination-jump-input"
             type="number"
             aria-label="Jump to page"
             min={1}
-            max={Math.max(1, Math.ceil(totalCount / pageSize))}
+            max={totalPages}
             value={jumpPage}
             onChange={(e) => setJumpPage(e.target.value)}
           />
           <button
             className="btn btn-secondary btn-sm"
             onClick={() => {
-              const max = Math.max(1, Math.ceil(totalCount / pageSize));
+              const max = totalPages;
               const p = Math.min(max, Math.max(1, Number(jumpPage) || 1));
               setPage(p);
-              fetchRecordings(p, pageSize);
             }}
           >
             Go
@@ -316,7 +366,6 @@ export default function ProcessRecording() {
               const size = parsePageSize(e.target.value, totalCount);
               setPageSize(size);
               setPage(1);
-              fetchRecordings(1, size);
             }}
           >
             <option value={10}>10 / page</option>
@@ -327,11 +376,10 @@ export default function ProcessRecording() {
           </select>
           <button
             className="btn btn-secondary btn-sm"
-            disabled={!hasMore || loading}
+            disabled={page >= totalPages || loading}
             onClick={() => {
               const p = page + 1;
               setPage(p);
-              fetchRecordings(p, pageSize);
             }}
           >
             Next
@@ -501,7 +549,7 @@ export default function ProcessRecording() {
                 <label htmlFor="process-recording-follow-up-actions">
                   Follow-up Actions
                 </label>
-                <textarea
+                <select
                   id="process-recording-follow-up-actions"
                   value={formData.followUpActions ?? ""}
                   onChange={(e) =>
@@ -510,7 +558,14 @@ export default function ProcessRecording() {
                       followUpActions: e.target.value,
                     })
                   }
-                />
+                >
+                  <option value="">Select follow-up action...</option>
+                  {followUpOptions.map((v) => (
+                    <option key={v} value={v}>
+                      {v}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="form-group">
                 <label>
