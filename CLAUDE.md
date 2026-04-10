@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Full-stack nonprofit case management system for a trafficking survivor organization (Lighthouse Sanctuary Philippines). Capstone (INTEX) project for BYU.
+Full-stack nonprofit case management system for a trafficking survivor organization (Lighthouse Sanctuary Brazil). Capstone (INTEX) project for BYU.
 
 ## Commands
 

@@ -1,6 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import Navbar from '../components/Navbar';
+import jumpImage from '../assets/jump.jpg';
+import journalingImage from '../assets/journaling-edit.jpg';
 import '../styles/HomePage.css';
 
 export default function HomePage() {
@@ -24,12 +26,11 @@ export default function HomePage() {
     <div className="home">
       <Navbar />
 
-      <section className="hero-section">
+      <section
+        className="hero-section"
+        style={{ '--hero-bg': `url(${jumpImage})` } as React.CSSProperties}
+      >
         <h1>Restoring Hope, Rebuilding Lives</h1>
-        <p>
-          We provide safe shelter, healing programs, and reintegration support
-          for survivors of trafficking and abuse across the Philippines.
-        </p>
         <div className="hero-buttons">
           <button className="btn btn-primary" onClick={handleDonateClick}>Support Our Mission</button>
           <button className="btn btn-outline" onClick={() => navigate('/donor')}>View Our Impact</button>
@@ -40,10 +41,34 @@ export default function HomePage() {
         <h2>About Us</h2>
         <p>
           River of Life is a non-governmental organization dedicated to protecting and
-          empowering vulnerable women and children in the Philippines. Operating under
-          the guidelines of the Department of Social Welfare and Development (DSWD),
-          we provide comprehensive care spanning shelter, psychosocial support,
-          education, livelihood training, and family reintegration services.
+          empowering vulnerable women and children in Brazil. Our goal is to provide them with safety, healing, justice, and empowerment through safehouses and uplifting programs. 
+          We provide for their physical, mental, social, and spiritual health.
+        </p>
+      </section>
+
+      <section className="how-help-section">
+        <h2>How You Can Help</h2>
+        <p>
+          Your support makes a direct impact on the lives of survivors. Whether through financial donations,
+          volunteering your time, or advocating for awareness, every contribution strengthens our ability to
+          provide shelter, healing programs, and reintegration services. Together, we can create lasting change
+          and restore hope to those who need it most.
+        </p>
+      </section>
+
+      <section
+        className="journaling-section"
+        style={{ '--journaling-bg': `url(${journalingImage})` } as React.CSSProperties}
+      />
+
+
+      <section className="location-section">
+        <h2>Where We Are Based</h2>
+        <p>
+          We are headquartered in Brazil, where our international team collaborates with local partners
+          to support survivors across multiple regions. Our network extends throughout Brazil and beyond,
+          allowing us to provide culturally sensitive and locally-informed care to vulnerable populations
+          in underserved communities worldwide.
         </p>
       </section>
 
